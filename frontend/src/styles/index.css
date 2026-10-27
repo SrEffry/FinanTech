@@ -1,0 +1,186 @@
+/* Inter con eje de tamaño óptico: las cifras grandes (cuota, TEA) usan los cortes de display. */
+@import '@fontsource-variable/inter/opsz.css';
+@import 'tailwindcss';
+
+/*
+ * Tokens de la ERS (RI-02): azul institucional, verde de éxito, rojo solo para rechazo,
+ * mora o incidencia, y ámbar de advertencia. Espaciado en múltiplos de 4 px (la escala
+ * por defecto de Tailwind ya lo es). Los tonos 700 son los que se usan como texto sobre
+ * blanco porque cumplen 4,5:1 (RNF-19); el verde y el ámbar base no lo cumplen.
+ */
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+
+  --color-primario-50: #eef3fa;
+  --color-primario-100: #d9e4f3;
+  --color-primario-200: #b4c9e6;
+  --color-primario-300: #84a6d3;
+  --color-primario-400: #4f7dbb;
+  --color-primario-500: #2b5fa3;
+  --color-primario-600: #1b4d8f;
+  --color-primario-700: #163f76;
+  --color-primario-800: #12335f;
+  --color-primario-900: #0e2747;
+
+  --color-secundario-50: #e7f7f0;
+  --color-secundario-100: #c6ebdc;
+  --color-secundario-600: #0e9f6e;
+  --color-secundario-700: #0a7a55;
+  --color-secundario-800: #08664a;
+
+  --color-alerta-50: #fef1f0;
+  --color-alerta-100: #fddcd9;
+  --color-alerta-600: #d92d20;
+  --color-alerta-700: #b42318;
+
+  --color-advertencia-50: #fff8eb;
+  --color-advertencia-100: #feefc7;
+  --color-advertencia-500: #f59e0b;
+  --color-advertencia-700: #b45309;
+  --color-advertencia-800: #92400e;
+
+  /*
+   * Colores de datos (validados con el script de la skill dataviz):
+   * - contribuciones: azul a favor y naranja en contra, par divergente (CVD ΔE 21,1).
+   * - composición del crédito: dos pasos ordinales del azul de marca (capital y costo).
+   * No se usan el verde ni el rojo de estado para series.
+   */
+  --color-dato-favorable: #2b5fa3;
+  --color-dato-desfavorable: #c2410c;
+  --color-dato-capital: #84a6d3;
+  --color-dato-costo: #1b4d8f;
+
+  --color-tinta: #14294a;
+  --color-tinta-suave: #4a5b74;
+  --color-tinta-tenue: #5f6f86;
+  --color-fondo: #f7f9fc;
+  --color-superficie: #ffffff;
+  --color-linea: #d5deea;
+  --color-linea-suave: #e6ecf4;
+
+  /* Escala tipográfica de la ERS: 12/14/16/20/24, más dos tamaños para cifras. */
+  --text-cifra: 2rem;
+  --text-cifra--line-height: 1.1;
+  --text-cifra-xl: 2.75rem;
+  --text-cifra-xl--line-height: 1.05;
+
+  --radius-campo: 0.5rem;
+  --radius-panel: 0.75rem;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-fondo font-sans text-base text-tinta antialiased;
+    font-optical-sizing: auto;
+  }
+
+  /* Foco siempre visible con teclado (RNF-19). */
+  :focus-visible {
+    outline: 3px solid var(--color-primario-400);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--color-primario-100);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@keyframes avance {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
+/* Deslizador del simulador: la parte recorrida en azul muestra dónde está el valor. */
+.deslizador {
+  appearance: none;
+  background: transparent;
+}
+
+.deslizador::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--color-primario-600) var(--progreso),
+    var(--color-linea) var(--progreso)
+  );
+}
+
+.deslizador::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-linea);
+}
+
+.deslizador::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-primario-600);
+}
+
+.deslizador::-webkit-slider-thumb {
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  margin-top: -10px;
+  border-radius: 50%;
+  background: var(--color-superficie);
+  border: 2px solid var(--color-primario-600);
+  box-shadow: 0 1px 3px rgb(20 41 74 / 0.25);
+}
+
+.deslizador::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-superficie);
+  border: 2px solid var(--color-primario-600);
+  box-shadow: 0 1px 3px rgb(20 41 74 / 0.25);
+}
+
+.deslizador:focus-visible {
+  outline: none;
+}
+
+.deslizador:focus-visible::-webkit-slider-thumb {
+  outline: 3px solid var(--color-primario-400);
+  outline-offset: 2px;
+}
+
+.deslizador:focus-visible::-moz-range-thumb {
+  outline: 3px solid var(--color-primario-400);
+  outline-offset: 2px;
+}
+
+@utility cifras {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum', 'cv11';
+}
+
+/* Contenido solo para impresión (constancias y pagaré). */
+@media print {
+  .no-imprimir {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+  }
+}
