@@ -74,6 +74,19 @@ Además:
   - **Finalidades necesarias:** se acepta RN-18 (no se revocan desde el portal y se remite a los canales de atención). La contradicción con RF-04 FA-01 se escala a las personas para la ERS v1.1.
   - **Tamaño de la petición de verificación de identidad** (3 fotos de hasta 10 MB contra un límite de 14 MB): se suben los límites. qa-senior cambia `docker/php/php.ini` (`post_max_size = 32M`; `upload_max_filesize` se queda en 10M por archivo, RN-30) y `client_max_body_size 32M` en `docker/nginx/default.conf`. Rige con la misma reconstrucción de PCOV, después del commit de la ronda 1. Además, frontend-senior reduce las fotos en el navegador antes de enviarlas (en T12, opcional si alcanza).
 
+## Decisiones de las personas (Efren, 01/11)
+
+Mandan sobre las decisiones del gerente. Las correcciones de la ERS v1.1 las pasa al documento el compañero encargado; los agentes no editan la ERS.
+
+- **P1 · Ronda 1 cerrada:** 8 commits en `feature` (hasta `8d1daff`). Contenedor reconstruido: **PCOV activo** y límites de subida nuevos. Se agrega **Mailpit**: los correos de desarrollo se ven en http://localhost:8025 (el SMS simulado sigue en `laravel.log`). Si tras reconstruir la API da 502: `docker compose restart web`.
+- **P2 · RI-08:** se acepta el JWT propio en cookie httpOnly con rotación en lugar de OAuth 2.0/OIDC con PKCE. Va como corrección de la ERS v1.1.
+- **P3 · O-01 (CP0005 contra RF-01 FA-01):** manda RN-17. El registro con un documento o correo ya existente responde **neutro**, sin confirmar que la cuenta existe, y el aviso real llega por correo al titular. Lo hace backend-senior en la ronda 2 y qa-senior ajusta sus pruebas.
+- **P4 · Finalidades necesarias:** se confirma RN-18 (D9).
+- **P5 · Integración continua:** sí. qa-senior monta GitHub Actions (Pest sobre MySQL 8.4, incluida la prueba de arquitectura, y `npm test`, `lint` y `build` del portal) en cada push y en cada pull request.
+- **P6 · Recorte:** se aprueba el orden de recorte de `plan.md`.
+- **P7 · MR-004** (firma y desembolso simulados) aprobado, y la lectura de E3 de D8 aceptada.
+- **P8 · REDISEÑO VISUAL (prioridad de la ronda 2):** el portal funciona, pero es **básico**. La meta es que sea **estéticamente atractivo**: que la persona entre y se sienta atraída y con confianza, como en una fintech moderna de primer nivel. No basta con corregir contraste: hace falta una **identidad visual propia** (marca, paleta, tipografía, ilustración o imagen, jerarquía, profundidad, microinteracciones y movimiento sutil) y una **página de inicio pública** que venda el producto. **ux-ui-senior dirige** el rediseño y lo diseña de verdad, no solo en documentos: puede editar `frontend/src/styles/`, los componentes de `frontend/src/components/` y la página pública, de acuerdo con frontend-senior. **frontend-senior lo implementa** en todas las pantallas. Sin romper accesibilidad (WCAG 2.2 AA), mobile-first, la TEA junto a la cuota con el mismo peso, el distintivo de simulado ni las pruebas.
+
 ## Mensajes
 
 <!-- Formato: - [fecha] @destinatario de @remitente: mensaje -->
