@@ -35,7 +35,7 @@ export function Field({ id, etiqueta, ayuda, error, opcional, children, classNam
   return (
     <Contexto value={{ id, invalido: Boolean(error), describedBy: ids.length ? ids.join(' ') : undefined }}>
       <div className={`flex flex-col gap-1.5 ${className}`}>
-        <label htmlFor={id} className="text-sm font-medium text-tinta">
+        <label htmlFor={id} className="text-sm font-semibold text-tinta">
           {etiqueta}
           {opcional ? <span className="font-normal text-tinta-tenue"> (opcional)</span> : null}
         </label>
@@ -46,7 +46,7 @@ export function Field({ id, etiqueta, ayuda, error, opcional, children, classNam
           </p>
         ) : null}
         {error ? (
-          <p id={`${id}-error`} className="text-sm font-medium text-alerta-700">
+          <p id={`${id}-error`} className="flex items-start gap-1.5 text-sm font-medium text-alerta-700">
             {error}
           </p>
         ) : null}
@@ -59,13 +59,15 @@ function useCampo() {
   return use(Contexto)
 }
 
+// UX-10 (SV-01, SV-03): borde de control a 3,51:1 y el mismo contorno de foco del resto del
+// portal (2 px, foco 8,38:1); el borde azul refuerza, no reemplaza.
 const CONTROL =
-  'w-full rounded-campo border bg-superficie px-3 text-base text-tinta placeholder:text-tinta-tenue ' +
-  'transition-colors hover:border-primario-300 focus:border-primario-500 focus:outline-none focus-visible:outline-none ' +
-  'focus:ring-3 focus:ring-primario-100 disabled:cursor-not-allowed disabled:bg-fondo disabled:text-tinta-suave'
+  'w-full rounded-campo border bg-superficie px-3.5 text-base text-tinta shadow-reposo placeholder:text-tinta-tenue ' +
+  'transition-[border-color,box-shadow] duration-150 hover:border-tinta-suave focus:border-primario-600 ' +
+  'disabled:cursor-not-allowed disabled:border-linea disabled:bg-fondo disabled:text-tinta-suave disabled:shadow-none'
 
 function clasesControl(invalido: boolean, extra = '') {
-  return `${CONTROL} ${invalido ? 'border-alerta-600' : 'border-linea'} ${extra}`
+  return `${CONTROL} ${invalido ? 'border-alerta-600 hover:border-alerta-700' : 'border-linea-control'} ${extra}`
 }
 
 export function Input({ className = '', ...props }: InputHTMLAttributes<HTMLInputElement> & { ref?: React.Ref<HTMLInputElement> }) {
@@ -75,7 +77,7 @@ export function Input({ className = '', ...props }: InputHTMLAttributes<HTMLInpu
       id={campo?.id}
       aria-invalid={campo?.invalido || undefined}
       aria-describedby={campo?.describedBy}
-      className={clasesControl(Boolean(campo?.invalido), `min-h-11 ${className}`)}
+      className={clasesControl(Boolean(campo?.invalido), `min-h-12 ${className}`)}
       {...props}
     />
   )
@@ -92,7 +94,7 @@ export function Select({
       id={campo?.id}
       aria-invalid={campo?.invalido || undefined}
       aria-describedby={campo?.describedBy}
-      className={clasesControl(Boolean(campo?.invalido), `min-h-11 pr-8 ${className}`)}
+      className={clasesControl(Boolean(campo?.invalido), `min-h-12 pr-8 ${className}`)}
       {...props}
     >
       {children}
@@ -110,7 +112,7 @@ export function Textarea({
       id={campo?.id}
       aria-invalid={campo?.invalido || undefined}
       aria-describedby={campo?.describedBy}
-      className={clasesControl(Boolean(campo?.invalido), `min-h-28 py-2.5 ${className}`)}
+      className={clasesControl(Boolean(campo?.invalido), `min-h-28 py-3 ${className}`)}
       {...props}
     />
   )
@@ -119,7 +121,7 @@ export function Textarea({
 /** Dato que ya conocemos: visible pero bloqueado y diferenciado (RN-32). */
 export function DatoBloqueado({ etiqueta, valor }: { etiqueta: string; valor: ReactNode }) {
   return (
-    <div className="flex flex-col gap-1 rounded-campo border border-dashed border-linea bg-fondo px-3 py-2">
+    <div className="flex flex-col gap-1 rounded-campo border border-dashed border-linea-control/60 bg-fondo px-3.5 py-2.5">
       <dt className="text-xs text-tinta-tenue">{etiqueta}</dt>
       <dd className="text-sm font-medium text-tinta-suave">{valor}</dd>
     </div>

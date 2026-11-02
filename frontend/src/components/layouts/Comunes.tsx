@@ -10,7 +10,7 @@ export function SaltarAlContenido() {
   return (
     <a
       href="#contenido"
-      className="sr-only z-50 rounded-campo bg-primario-700 px-4 py-2 font-semibold text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+      className="sobre-oscuro sr-only z-50 rounded-full bg-noche px-5 py-2.5 font-semibold text-white shadow-flotante focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
     >
       Saltar al contenido
     </a>
@@ -23,7 +23,7 @@ export function BarraNavegacion() {
   if (navegacion.state === 'idle') return null
   return (
     <div role="progressbar" aria-label="Cargando la página" className="fixed inset-x-0 top-0 z-50 h-1 overflow-hidden bg-primario-100">
-      <div className="h-full w-1/3 animate-[avance_1.2s_ease-in-out_infinite] bg-primario-600" />
+      <div className="h-full w-1/3 animate-[avance_1.2s_ease-in-out_infinite] rounded-full bg-primario-600" />
     </div>
   )
 }
@@ -44,7 +44,7 @@ interface PropsEncabezado {
 /** Título de página con migas de pan (RI-03) y acciones. */
 export function EncabezadoPagina({ titulo, descripcion, migas, acciones, extra }: PropsEncabezado) {
   return (
-    <header className="mb-6 flex flex-col gap-3">
+    <header className="mb-6 flex flex-col gap-3 sm:mb-8">
       {migas && migas.length > 0 ? (
         <nav aria-label="Migas de pan">
           <ol className="flex flex-wrap items-center gap-1 text-sm text-tinta-suave">
@@ -66,12 +66,12 @@ export function EncabezadoPagina({ titulo, descripcion, migas, acciones, extra }
         </nav>
       ) : null}
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex max-w-3xl flex-col gap-1.5">
+        <div className="flex max-w-3xl flex-col gap-2">
           <title>{`${titulo} · FinanTech`}</title>
-          <h1 tabIndex={-1} className="text-2xl font-semibold tracking-tight text-tinta outline-none">
+          <h1 tabIndex={-1} className="titular text-2xl leading-tight font-semibold text-noche outline-none sm:text-[1.75rem]">
             {titulo}
           </h1>
-          {descripcion ? <div className="text-base text-tinta-suave">{descripcion}</div> : null}
+          {descripcion ? <div className="max-w-[65ch] text-base leading-relaxed text-tinta-suave">{descripcion}</div> : null}
         </div>
         {acciones ? <div className="flex flex-wrap gap-2">{acciones}</div> : null}
       </div>

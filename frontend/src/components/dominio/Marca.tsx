@@ -1,21 +1,30 @@
 import { formatoMoneda, monedaParaLector } from '../../lib/formato'
 
+/**
+ * Marca FinanTech: la F de dos trazos y el punto menta, "el punto final" de unas cuentas
+ * claras. Palabra en Archivo semiexpandida (direccion-visual §4).
+ */
 export function Logo({ claro = false, className = '' }: { claro?: boolean; className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-2 ${className}`}>
+    <span className={`inline-flex items-center gap-2.5 ${className}`}>
       <svg viewBox="0 0 32 32" aria-hidden="true" className="size-8 shrink-0">
-        <rect width="32" height="32" rx="7" fill={claro ? '#ffffff' : '#1B4D8F'} />
+        <rect width="32" height="32" rx="9" fill={claro ? '#ffffff' : '#1B4D8F'} />
         <path
-          d="M9 23V9h13M9 16h9"
+          d="M10 23.5V8.5h12.5M10 16h8.5"
           fill="none"
-          stroke={claro ? '#1B4D8F' : '#ffffff'}
-          strokeWidth="3.2"
+          stroke={claro ? '#0E2240' : '#ffffff'}
+          strokeWidth="3.4"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
-        <circle cx="22.5" cy="21.5" r="2.5" fill="#0E9F6E" />
+        <circle cx="22.5" cy="22" r="2.75" fill="#0E9F6E" />
       </svg>
-      <span translate="no" className={`text-lg font-bold tracking-tight ${claro ? 'text-white' : 'text-tinta'}`}>FinanTech</span>
+      <span
+        translate="no"
+        className={`titular text-[1.1875rem] leading-none font-bold tracking-[-0.02em] ${claro ? 'text-white' : 'text-noche'}`}
+      >
+        FinanTech
+      </span>
     </span>
   )
 }

@@ -1,5 +1,7 @@
 # Sistema visual del portal FinanTech
 
+> **02/11/2026:** la guía de diseño vigente es `docs/ux/direccion-visual.md` (T28, P8). Este documento queda como inventario y registro de los hallazgos SV-01 a SV-12; la propuesta de la sección 3 ya está aplicada en `frontend/src/styles/index.css` y `components/ui/` (UX-10).
+
 Autor: ux-ui-senior. Fecha: 01/11/2026. Fuente de los tokens: `frontend/src/styles/index.css` (bloque `@theme` de Tailwind 4) y las clases de `frontend/src/components/ui/`.
 
 Base normativa: RI-02 (paleta, tipografía 12/14/16/20/24, espaciado en múltiplos de 4, rojo reservado), RI-01 (44×44 px en móvil, sin desplazamiento horizontal de 320 px a 4K), RI-04 (estados de botón), RNF-19 (WCAG AA, contraste 4,5:1, nada comunicado solo por color) y WCAG 2.2 AA (1.4.3, 1.4.11, 2.4.7, 2.4.11, 2.5.8).

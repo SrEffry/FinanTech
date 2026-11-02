@@ -42,7 +42,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={t.id}
             role={t.tipo === 'error' ? 'alert' : 'status'}
-            className="pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-panel border border-linea bg-superficie px-4 py-3 text-sm text-tinta shadow-lg shadow-tinta/10"
+            className="pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-panel border border-linea bg-superficie px-4 py-3 text-sm text-tinta shadow-flotante"
           >
             {t.tipo === 'exito' ? (
               <CircleCheck aria-hidden="true" className="size-5 shrink-0 text-secundario-700" />
@@ -53,7 +53,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <button
               type="button"
               onClick={() => cerrar(t.id)}
-              className="-m-1 inline-flex size-8 items-center justify-center rounded-campo text-tinta-tenue hover:bg-fondo"
+              className="-m-2 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-tinta-suave hover:bg-fondo sm:-m-1 sm:size-8"
               aria-label="Cerrar aviso"
             >
               <X aria-hidden="true" className="size-4" />

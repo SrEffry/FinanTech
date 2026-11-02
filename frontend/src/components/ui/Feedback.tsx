@@ -5,7 +5,7 @@ export type TonoAviso = 'info' | 'exito' | 'advertencia' | 'error'
 
 const ESTILOS: Record<TonoAviso, { caja: string; icono: ReactNode }> = {
   info: {
-    caja: 'border-primario-200 bg-primario-50 text-primario-800',
+    caja: 'border-primario-200 bg-cielo text-primario-800',
     icono: <Info aria-hidden="true" className="size-5 shrink-0 text-primario-600" />,
   },
   exito: {
@@ -36,7 +36,7 @@ export function Alert({ tono = 'info', titulo, children, accion, className = '' 
   return (
     <div
       role={tono === 'error' ? 'alert' : 'status'}
-      className={`flex gap-3 rounded-campo border px-4 py-3 ${estilo.caja} ${className}`}
+      className={`flex gap-3 rounded-panel border px-4 py-3.5 ${estilo.caja} ${className}`}
     >
       {estilo.icono}
       <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -51,17 +51,17 @@ export function Alert({ tono = 'info', titulo, children, accion, className = '' 
 export type TonoInsignia = 'neutro' | 'progreso' | 'accion' | 'exito' | 'negado' | 'info'
 
 const INSIGNIAS: Record<TonoInsignia, string> = {
-  neutro: 'bg-linea-suave text-tinta-suave',
-  progreso: 'bg-primario-50 text-primario-700',
-  info: 'bg-primario-50 text-primario-700',
-  accion: 'bg-advertencia-100 text-advertencia-800',
-  exito: 'bg-secundario-50 text-secundario-800',
-  negado: 'bg-alerta-50 text-alerta-700',
+  neutro: 'bg-linea-suave text-tinta-suave ring-1 ring-inset ring-linea',
+  progreso: 'bg-cielo text-primario-700 ring-1 ring-inset ring-primario-200',
+  info: 'bg-cielo text-primario-700 ring-1 ring-inset ring-primario-200',
+  accion: 'bg-advertencia-100 text-advertencia-800 ring-1 ring-inset ring-advertencia-500/50',
+  exito: 'bg-secundario-50 text-secundario-800 ring-1 ring-inset ring-secundario-100',
+  negado: 'bg-alerta-50 text-alerta-700 ring-1 ring-inset ring-alerta-100',
 }
 
 export function Badge({ tono = 'neutro', children, icono }: { tono?: TonoInsignia; children: ReactNode; icono?: ReactNode }) {
   return (
-    <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap ${INSIGNIAS[tono]}`}>
+    <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs leading-none font-semibold whitespace-nowrap ${INSIGNIAS[tono]}`}>
       {icono}
       {children}
     </span>
@@ -81,9 +81,12 @@ interface PropsPanel {
 }
 
 const PANELES = {
-  normal: 'rounded-panel border border-linea bg-superficie',
-  plano: 'rounded-campo bg-fondo',
-  destacado: 'rounded-panel border-2 border-primario-600 bg-superficie',
+  normal: 'rounded-panel border border-linea bg-superficie shadow-reposo',
+  plano: 'rounded-panel bg-fondo',
+  // El bloque protagonista de la pantalla (resultado, oferta): elevado y con el filo de marca arriba.
+  destacado:
+    'relative overflow-hidden rounded-panel border border-primario-200 bg-superficie shadow-elevada ' +
+    'before:absolute before:inset-x-0 before:top-0 before:h-1 before:bg-primario-600',
 }
 
 export function Panel({ children, className = '', variante = 'normal', as: Etiqueta = 'section', titulo, descripcion, acciones, id }: PropsPanel) {
@@ -94,7 +97,7 @@ export function Panel({ children, className = '', variante = 'normal', as: Etiqu
         <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-col gap-1">
             {titulo ? (
-              <h2 id={tituloId} className="text-lg font-semibold text-tinta">
+              <h2 id={tituloId} className="titular text-xl font-semibold text-tinta">
                 {titulo}
               </h2>
             ) : null}
@@ -111,9 +114,11 @@ export function Panel({ children, className = '', variante = 'normal', as: Etiqu
 /** Pantalla o lista vacía: siempre con la acción que sigue. */
 export function EmptyState({ titulo, children, accion, icono }: { titulo: string; children?: ReactNode; accion?: ReactNode; icono?: ReactNode }) {
   return (
-    <div className="flex flex-col items-start gap-3 rounded-panel border border-dashed border-linea bg-superficie px-5 py-8 sm:items-center sm:text-center">
-      {icono ? <span className="text-primario-400">{icono}</span> : null}
-      <p className="text-base font-semibold text-tinta">{titulo}</p>
+    <div className="flex flex-col items-start gap-3 rounded-panel border border-dashed border-linea-control/50 bg-superficie px-5 py-10 sm:items-center sm:text-center">
+      {icono ? (
+        <span className="flex size-14 items-center justify-center rounded-full bg-cielo text-primario-600 ring-8 ring-cielo/40">{icono}</span>
+      ) : null}
+      <p className="titular text-xl font-semibold text-tinta">{titulo}</p>
       {children ? <div className="max-w-prose text-sm text-tinta-suave">{children}</div> : null}
       {accion}
     </div>

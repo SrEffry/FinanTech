@@ -25,9 +25,9 @@ export function PortalLayout() {
     <div className="min-h-dvh bg-fondo">
       <SaltarAlContenido />
       <BarraNavegacion />
-      <header className="no-imprimir sticky top-0 z-30 border-b border-linea bg-superficie/95 backdrop-blur">
+      <header className="no-imprimir sticky top-0 z-30 border-b border-linea/80 bg-superficie/90 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-          <NavLink to="/portal" aria-label="FinanTech, ir al inicio">
+          <NavLink to="/portal" aria-label="FinanTech, ir al inicio" className="rounded-campo">
             <Logo />
           </NavLink>
           <nav aria-label="Secciones del portal" className="hidden md:block">
@@ -38,8 +38,8 @@ export function PortalLayout() {
                     to={a}
                     end={fin}
                     className={({ isActive }) =>
-                      `inline-flex min-h-11 items-center rounded-campo px-3 text-sm font-medium transition-colors ${
-                        isActive ? 'bg-primario-50 text-primario-700' : 'text-tinta-suave hover:bg-fondo hover:text-tinta'
+                      `inline-flex min-h-11 items-center rounded-full px-4 text-sm transition-colors ${
+                        isActive ? 'bg-cielo font-semibold text-primario-700' : 'font-medium text-tinta-suave hover:bg-fondo hover:text-tinta'
                       }`
                     }
                   >
@@ -50,12 +50,17 @@ export function PortalLayout() {
             </ul>
           </nav>
           <div className="flex items-center gap-2">
-            <span className="hidden text-sm text-tinta-suave lg:inline">Hola, {usuario.nombre_corto}</span>
+            <span className="hidden items-center gap-2 text-sm text-tinta-suave lg:inline-flex">
+              <span aria-hidden="true" className="titular flex size-8 items-center justify-center rounded-full bg-noche text-xs font-bold text-white">
+                {usuario.nombre_corto.trim().charAt(0).toUpperCase()}
+              </span>
+              Hola, {usuario.nombre_corto}
+            </span>
             <button
               type="button"
               onClick={() => cerrar.mutate()}
               disabled={cerrar.isPending}
-              className="inline-flex min-h-11 items-center gap-2 rounded-campo px-3 text-sm font-medium text-tinta-suave hover:bg-fondo hover:text-tinta"
+              className="inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium text-tinta-suave transition-colors hover:bg-fondo hover:text-tinta"
             >
               <LogOut aria-hidden="true" className="size-4" />
               <span>Salir</span>
@@ -64,13 +69,13 @@ export function PortalLayout() {
         </div>
       </header>
 
-      <main id="contenido" tabIndex={-1} className="mx-auto max-w-6xl px-4 pt-6 pb-28 outline-none sm:px-6 md:pb-12">
+      <main id="contenido" tabIndex={-1} className="mx-auto max-w-6xl px-4 pt-6 pb-28 outline-none sm:px-6 sm:pt-8 md:pb-16">
         <Outlet />
       </main>
 
       <nav
         aria-label="Secciones del portal"
-        className="no-imprimir fixed inset-x-0 bottom-0 z-30 border-t border-linea bg-superficie pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="no-imprimir fixed inset-x-0 bottom-0 z-30 border-t border-linea bg-superficie/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-16px_rgb(14_34_64/0.25)] backdrop-blur-md md:hidden"
       >
         <ul className="grid grid-cols-4">
           {SECCIONES.map(({ a, etiqueta, icono: Icono, fin }) => (
@@ -79,14 +84,18 @@ export function PortalLayout() {
                 to={a}
                 end={fin}
                 className={({ isActive }) =>
-                  `flex min-h-16 flex-col items-center justify-center gap-1 text-xs font-medium ${
-                    isActive ? 'text-primario-700' : 'text-tinta-tenue'
+                  `relative flex min-h-16 flex-col items-center justify-center gap-1 text-xs ${
+                    isActive ? 'font-semibold text-primario-700' : 'font-medium text-tinta-suave'
                   }`
                 }
               >
                 {({ isActive }) => (
                   <>
-                    <Icono aria-hidden="true" className="size-5" strokeWidth={isActive ? 2.4 : 1.8} />
+                    {/* La sección activa no se marca solo con color: barra arriba y negrita (SV-10). */}
+                    {isActive ? <span aria-hidden="true" className="absolute top-0 h-[3px] w-10 rounded-b-full bg-secundario-600" /> : null}
+                    <span className={`flex h-7 w-14 items-center justify-center rounded-full transition-colors ${isActive ? 'bg-cielo' : ''}`}>
+                      <Icono aria-hidden="true" className="size-5" strokeWidth={isActive ? 2.4 : 1.8} />
+                    </span>
                     {etiqueta}
                   </>
                 )}

@@ -13,7 +13,7 @@ export const API_SIMULADA = import.meta.env.VITE_API_SIMULADA === 'true'
 export function DistintivoSimulado({ que = 'Resultado simulado' }: { que?: string }) {
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full border border-advertencia-500 bg-advertencia-50 px-2.5 py-1 text-xs font-semibold text-advertencia-800"
+      className="inline-flex items-center gap-1.5 rounded-full border-[1.5px] border-advertencia-700 bg-advertencia-50 px-2.5 py-1 text-xs font-semibold text-advertencia-800"
       title="Lo generó un servicio de prueba, no el proveedor real."
     >
       <FlaskConical aria-hidden="true" className="size-3.5" />

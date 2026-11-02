@@ -20,7 +20,7 @@ export function Checkbox({ etiqueta, descripcion, error, id, className = '', dis
           disabled={disabled}
           aria-describedby={describedBy || undefined}
           aria-invalid={error ? true : undefined}
-          className="mt-0.5 size-5 shrink-0 cursor-pointer rounded border-linea accent-primario-600 disabled:cursor-not-allowed"
+          className="mt-0.5 size-5 shrink-0 cursor-pointer rounded accent-primario-600 disabled:cursor-not-allowed"
           {...props}
         />
       </span>
@@ -52,29 +52,38 @@ interface PropsInterruptor {
   describedBy?: string
 }
 
-/** Interruptor accesible: un botón con role="switch" y aria-checked. */
+/**
+ * Interruptor accesible: un botón con role="switch" y aria-checked. Apagado se ve con borde
+ * de control (3,51:1) y pulgar oscuro; además dice "Sí" o "No" en texto, para que el estado
+ * no dependa solo de la posición ni del color (SV-02, UX-10, WCAG 1.4.1 y 1.4.11).
+ */
 export function Switch({ id, activo, onCambiar, etiqueta, disabled, describedBy }: PropsInterruptor) {
   return (
-    <button
-      id={id}
-      type="button"
-      role="switch"
-      aria-checked={activo}
-      aria-label={etiqueta}
-      aria-describedby={describedBy}
-      disabled={disabled}
-      onClick={() => onCambiar(!activo)}
-      className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-        activo ? 'bg-secundario-700' : 'bg-tinta-tenue/40'
-      }`}
-    >
-      <span
-        aria-hidden="true"
-        className={`inline-block size-5 rounded-full bg-white shadow-sm transition-transform ${
-          activo ? 'translate-x-6' : 'translate-x-1'
+    <span className="inline-flex shrink-0 items-center gap-2">
+      <button
+        id={id}
+        type="button"
+        role="switch"
+        aria-checked={activo}
+        aria-label={etiqueta}
+        aria-describedby={describedBy}
+        disabled={disabled}
+        onClick={() => onCambiar(!activo)}
+        className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border-2 transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60 ${
+          activo ? 'border-secundario-700 bg-secundario-700' : 'border-linea-control bg-superficie'
         }`}
-      />
-    </button>
+      >
+        <span
+          aria-hidden="true"
+          className={`inline-block size-5 rounded-full shadow-sm transition-transform duration-150 ease-salida ${
+            activo ? 'translate-x-5.5 bg-white' : 'translate-x-0.5 bg-tinta-tenue'
+          }`}
+        />
+      </button>
+      <span aria-hidden="true" className={`w-6 text-sm font-semibold ${activo ? 'text-secundario-700' : 'text-tinta-suave'}`}>
+        {activo ? 'Sí' : 'No'}
+      </span>
+    </span>
   )
 }
 
@@ -101,7 +110,7 @@ export function Slider({ id, etiqueta, valor, min, max, paso, onCambiar, textoVa
         <label htmlFor={id} className="text-sm font-medium text-tinta">
           {etiqueta}
         </label>
-        <output htmlFor={id} className="cifras text-xl font-semibold text-tinta">
+        <output htmlFor={id} className="cifras text-xl font-semibold tracking-tight text-tinta">
           {textoValor}
         </output>
       </div>

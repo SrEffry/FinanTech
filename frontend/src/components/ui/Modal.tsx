@@ -48,18 +48,18 @@ export function Modal({ abierto, onCerrar, titulo, descripcion, children, accion
       onClick={(e) => {
         if (cierreFuera && e.target === referencia.current) onCerrar()
       }}
-      className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-panel border border-linea bg-superficie p-0 text-tinta backdrop:bg-tinta/50"
+      className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-[1.25rem] border border-linea bg-superficie p-0 text-tinta shadow-flotante backdrop:bg-noche/60 backdrop:backdrop-blur-sm"
     >
       {abierto ? (
         <div className="flex flex-col gap-4 p-5 sm:p-6">
           <div className="flex items-start justify-between gap-4">
-            <h2 id={tituloId} className="text-xl font-semibold">
+            <h2 id={tituloId} className="titular text-xl font-semibold">
               {titulo}
             </h2>
             <button
               type="button"
               onClick={onCerrar}
-              className="-m-2 inline-flex size-11 items-center justify-center rounded-campo text-tinta-suave hover:bg-fondo"
+              className="-m-2 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-tinta-suave transition-colors hover:bg-fondo hover:text-tinta"
               aria-label="Cerrar"
             >
               <X aria-hidden="true" className="size-5" />

@@ -22,8 +22,8 @@ export function Stepper({ pasos, actual, etiqueta }: { pasos: string[]; actual: 
                   completado
                     ? 'bg-primario-600 text-white'
                     : esActual
-                      ? 'border-2 border-primario-600 bg-superficie text-primario-700'
-                      : 'border border-linea bg-superficie text-tinta-tenue'
+                      ? 'border-2 border-primario-600 bg-cielo text-primario-700 ring-4 ring-primario-100'
+                      : 'border-[1.5px] border-linea-control bg-superficie text-tinta-suave'
                 }`}
               >
                 {completado ? <Check aria-hidden="true" className="size-4" /> : i + 1}
@@ -38,7 +38,7 @@ export function Stepper({ pasos, actual, etiqueta }: { pasos: string[]; actual: 
                 </span>
               ) : null}
               {i < pasos.length - 1 ? (
-                <span aria-hidden="true" className={`h-px flex-1 ${completado ? 'bg-primario-600' : 'bg-linea'}`} />
+                <span aria-hidden="true" className={`h-0.5 flex-1 rounded-full ${completado ? 'bg-primario-600' : 'bg-linea'}`} />
               ) : null}
             </li>
           )

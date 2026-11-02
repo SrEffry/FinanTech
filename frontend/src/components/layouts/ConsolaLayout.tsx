@@ -115,8 +115,10 @@ export function ConsolaLayout() {
           to={a}
           onClick={() => setMenuAbierto(false)}
           className={({ isActive }) =>
-            `flex min-h-11 items-center gap-3 rounded-campo px-3 text-sm font-medium transition-colors ${
-              isActive ? 'bg-white/12 text-white' : 'text-primario-100 hover:bg-white/8 hover:text-white'
+            `relative flex min-h-11 items-center gap-3 rounded-campo px-3 text-sm transition-colors ${
+              isActive
+                ? 'bg-white/10 font-semibold text-white before:absolute before:inset-y-2 before:-left-3 before:w-1 before:rounded-r-full before:bg-menta-300'
+                : 'font-medium text-niebla hover:bg-white/6 hover:text-white'
             }`
           }
         >
@@ -128,15 +130,15 @@ export function ConsolaLayout() {
   )
 
   const pie = (
-    <div className="flex flex-col gap-3 border-t border-white/12 px-6 py-4">
+    <div className="flex flex-col gap-3 border-t border-white/10 px-6 py-4">
       <div className="flex flex-col">
         <span className="text-sm font-semibold text-white">{usuario.nombre_completo}</span>
-        <span className="text-xs text-primario-200">{NOMBRE_ROL[usuario.rol]}</span>
+        <span className="text-xs text-bruma">{NOMBRE_ROL[usuario.rol]}</span>
       </div>
       <button
         type="button"
         onClick={() => cerrar.mutate()}
-        className="inline-flex min-h-11 items-center gap-2 rounded-campo text-sm font-medium text-primario-100 hover:text-white"
+        className="inline-flex min-h-11 items-center gap-2 self-start rounded-full text-sm font-medium text-niebla hover:text-white"
       >
         <LogOut aria-hidden="true" className="size-4" />
         Cerrar sesión
@@ -149,16 +151,16 @@ export function ConsolaLayout() {
       <SaltarAlContenido />
       <BarraNavegacion />
 
-      <aside className="hidden flex-col bg-primario-800 lg:sticky lg:top-0 lg:flex lg:h-dvh">
+      <aside className="sobre-oscuro trama-trenza hidden flex-col bg-noche lg:sticky lg:top-0 lg:flex lg:h-dvh">
         <div className="px-6 py-5">
           <Logo claro />
-          <p className="mt-1 text-xs text-primario-200">Consola interna</p>
+          <p className="mt-2 text-xs text-bruma">Consola interna</p>
         </div>
         {navegacion}
         {pie}
       </aside>
 
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between bg-primario-800 px-4 lg:hidden">
+      <header className="sobre-oscuro sticky top-0 z-30 flex h-14 items-center justify-between bg-noche px-4 lg:hidden">
         <Logo claro />
         <button
           type="button"
@@ -173,8 +175,8 @@ export function ConsolaLayout() {
       </header>
       {menuAbierto ? (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <button type="button" aria-label="Cerrar menú" className="absolute inset-0 bg-tinta/50" onClick={() => setMenuAbierto(false)} />
-          <div id="menu-consola" className="relative flex h-full w-72 flex-col bg-primario-800 pt-4">
+          <button type="button" aria-label="Cerrar menú" className="absolute inset-0 bg-noche/60 backdrop-blur-sm" onClick={() => setMenuAbierto(false)} />
+          <div id="menu-consola" className="sobre-oscuro trama-trenza relative flex h-full w-72 flex-col bg-noche pt-4 shadow-flotante">
             <div className="flex items-center justify-between px-6 pb-4">
               <Logo claro />
               <button

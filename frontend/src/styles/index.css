@@ -1,16 +1,23 @@
-/* Inter con eje de tamaño óptico: las cifras grandes (cuota, TEA) usan los cortes de display. */
+/*
+ * Dirección visual: docs/ux/direccion-visual.md ("El recibo abierto").
+ * Inter (eje óptico) para texto, controles y cifras; Archivo (eje de ancho, fundidora
+ * argentina Omnibus-Type) semiexpandida para los títulos. Solo @fontsource: nada de CDN.
+ */
 @import '@fontsource-variable/inter/opsz.css';
+@import '@fontsource-variable/archivo/wdth.css';
 @import 'tailwindcss';
 
 /*
  * Tokens de la ERS (RI-02): azul institucional, verde de éxito, rojo solo para rechazo,
- * mora o incidencia, y ámbar de advertencia. Espaciado en múltiplos de 4 px (la escala
- * por defecto de Tailwind ya lo es). Los tonos 700 son los que se usan como texto sobre
- * blanco porque cumplen 4,5:1 (RNF-19); el verde y el ámbar base no lo cumplen.
+ * mora o incidencia, y ámbar de advertencia y de "simulado". Espaciado en múltiplos de 4 px.
+ * Los tonos 700 son los de texto sobre blanco porque cumplen 4,5:1 (RNF-19); el verde y el
+ * ámbar base no lo cumplen. Contrastes medidos en docs/ux/direccion-visual.md §3.
  */
 @theme {
   --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Archivo Variable', 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
 
+  /* Azul FinanTech. El 600 es el primario de la ERS (#1B4D8F, 8,38:1 con blanco). */
   --color-primario-50: #eef3fa;
   --color-primario-100: #d9e4f3;
   --color-primario-200: #b4c9e6;
@@ -22,6 +29,19 @@
   --color-primario-800: #12335f;
   --color-primario-900: #0e2747;
 
+  /* Noche: la superficie oscura de la marca (blanco 15,89:1). No es negro teñido: es azul. */
+  --color-noche: #0e2240;
+  --color-noche-2: #163258;
+  /* Texto sobre noche: niebla 10,81:1 y bruma 8,23:1. */
+  --color-niebla: #c9d6ea;
+  --color-bruma: #a9bcd8;
+  /* Cielo: fondo de bloques destacados claros (tinta 12,65:1; tinta-tenue NO: 4,46:1). */
+  --color-cielo: #e8f0fb;
+
+  /* Menta: el verde de la ERS. 600 solo en el logo y sobre noche (4,69:1); 300 para texto
+     y foco sobre noche (10,18:1). Sobre blanco el texto verde es siempre el 700. */
+  --color-menta-200: #a8eccf;
+  --color-menta-300: #7ee2b8;
   --color-secundario-50: #e7f7f0;
   --color-secundario-100: #c6ebdc;
   --color-secundario-600: #0e9f6e;
@@ -53,10 +73,16 @@
   --color-tinta: #14294a;
   --color-tinta-suave: #4a5b74;
   --color-tinta-tenue: #5f6f86;
-  --color-fondo: #f7f9fc;
+  --color-fondo: #f4f7fb;
   --color-superficie: #ffffff;
+  /* Divisores y bordes de panel (decorativos). */
   --color-linea: #d5deea;
   --color-linea-suave: #e6ecf4;
+  /* Contorno de controles: 3,51:1 sobre blanco y 3,27:1 sobre fondo (WCAG 1.4.11, UX-10). */
+  --color-linea-control: #7a8aa2;
+  /* Foco único (SV-03, SV-04): 8,38:1 sobre blanco; sobre noche se usa menta-300 (10,18:1). */
+  --color-foco: #1b4d8f;
+  --color-foco-sobre-oscuro: #7ee2b8;
 
   /* Escala tipográfica de la ERS: 12/14/16/20/24, más dos tamaños para cifras. */
   --text-cifra: 2rem;
@@ -64,13 +90,33 @@
   --text-cifra-xl: 2.75rem;
   --text-cifra-xl--line-height: 1.05;
 
-  --radius-campo: 0.5rem;
-  --radius-panel: 0.75rem;
+  /* Radios con jerarquía: control < panel < lienzo. Botones e insignias, píldora. */
+  --radius-campo: 0.625rem;
+  --radius-panel: 1rem;
+  --radius-lienzo: 1.75rem;
+
+  /* Profundidad teñida de noche, nunca gris neutro. Solo en lo que está por encima. */
+  --shadow-reposo: 0 1px 2px rgb(14 34 64 / 0.05);
+  --shadow-elevada: 0 1px 2px rgb(14 34 64 / 0.06), 0 12px 32px -12px rgb(14 34 64 / 0.22);
+  --shadow-flotante: 0 2px 6px rgb(14 34 64 / 0.08), 0 32px 64px -24px rgb(14 34 64 / 0.4);
+  --shadow-boton: inset 0 1px 0 rgb(255 255 255 / 0.14), 0 1px 2px rgb(14 34 64 / 0.2);
+
+  /* Movimiento: corto y con salida suave. Se apaga con prefers-reduced-motion. */
+  --ease-salida: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
+    /* Los elementos fijos (cabecera, barra inferior) no tapan el foco (SV-09, WCAG 2.4.11). */
+    scroll-padding-top: 5rem;
+    scroll-padding-bottom: 6rem;
+  }
+
+  @media (min-width: 768px) {
+    html {
+      scroll-padding-bottom: 2rem;
+    }
   }
 
   body {
@@ -78,10 +124,27 @@
     font-optical-sizing: auto;
   }
 
-  /* Foco siempre visible con teclado (RNF-19). */
+  /* Foco único y siempre visible con teclado (RNF-19, WCAG 2.4.7, UX-10). */
   :focus-visible {
-    outline: 3px solid var(--color-primario-400);
+    outline: 2px solid var(--color-foco);
     outline-offset: 2px;
+  }
+
+  /* Sobre superficies oscuras (noche, azul): foco en menta (SV-04). */
+  .sobre-oscuro :focus-visible,
+  .sobre-oscuro:focus-visible {
+    outline-color: var(--color-foco-sobre-oscuro);
+  }
+
+  /* Todos los títulos con la voz de la marca (Archivo semiexpandida); cada pantalla puede
+     afinar tamaño y peso con utilidades. */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-stretch: 108%;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
   }
 
   ::selection {
@@ -89,13 +152,41 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto !important;
+    }
+
     *,
     *::before,
     *::after {
       animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      animation-delay: 0ms !important;
       transition-duration: 0.01ms !important;
     }
   }
+}
+
+/* Títulos de marca: Archivo semiexpandida. */
+@utility titular {
+  font-family: var(--font-display);
+  font-stretch: 112%;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+}
+
+@utility cifras {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum', 'cv11';
+}
+
+/*
+ * Trenza: textura geométrica inspirada en el tejido de caña flecha de Córdoba. Solo sobre
+ * superficies noche y a muy baja opacidad; es decoración, nunca lleva información.
+ */
+@utility trama-trenza {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='16' viewBox='0 0 32 16'%3E%3Cpath d='M0 8 8 0l8 8 8-8 8 8M0 16l8-8 8 8 8-8 8 8' fill='none' stroke='%23ffffff' stroke-opacity='.07' stroke-width='1.5'/%3E%3Cpath d='m8 6 2 2-2 2-2-2zm16 0 2 2-2 2-2-2z' fill='%237ee2b8' fill-opacity='.12'/%3E%3C/svg%3E");
+  background-size: 32px 16px;
 }
 
 @keyframes avance {
@@ -107,6 +198,47 @@
   }
 }
 
+/* El único momento orquestado del portal: el recibo de la página de inicio "sale impreso". */
+@keyframes recibo-sale {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Al recalcular, la cifra nueva entra suave: muestra qué cambió (respuesta a la persona). */
+@keyframes cifra-cambia {
+  from {
+    opacity: 0.35;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes renglon-aparece {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Borde inferior troquelado del recibo de la página de inicio (decorativo). */
+.recibo-borde {
+  -webkit-mask: radial-gradient(9px at 50% 100%, #0000 97%, #000) 50% / 22px 100%;
+  mask: radial-gradient(9px at 50% 100%, #0000 97%, #000) 50% / 22px 100%;
+}
+
 /* Deslizador del simulador: la parte recorrida en azul muestra dónde está el valor. */
 .deslizador {
   appearance: none;
@@ -114,7 +246,7 @@
 }
 
 .deslizador::-webkit-slider-runnable-track {
-  height: 6px;
+  height: 8px;
   border-radius: 999px;
   background: linear-gradient(
     to right,
@@ -124,26 +256,27 @@
 }
 
 .deslizador::-moz-range-track {
-  height: 6px;
+  height: 8px;
   border-radius: 999px;
   background: var(--color-linea);
 }
 
 .deslizador::-moz-range-progress {
-  height: 6px;
+  height: 8px;
   border-radius: 999px;
   background: var(--color-primario-600);
 }
 
 .deslizador::-webkit-slider-thumb {
   appearance: none;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   margin-top: -10px;
   border-radius: 50%;
   background: var(--color-superficie);
-  border: 2px solid var(--color-primario-600);
-  box-shadow: 0 1px 3px rgb(20 41 74 / 0.25);
+  border: 3px solid var(--color-primario-600);
+  box-shadow: 0 2px 6px rgb(14 34 64 / 0.25);
+  transition: transform 150ms var(--ease-salida);
 }
 
 .deslizador::-moz-range-thumb {
@@ -151,8 +284,12 @@
   height: 22px;
   border-radius: 50%;
   background: var(--color-superficie);
-  border: 2px solid var(--color-primario-600);
-  box-shadow: 0 1px 3px rgb(20 41 74 / 0.25);
+  border: 3px solid var(--color-primario-600);
+  box-shadow: 0 2px 6px rgb(14 34 64 / 0.25);
+}
+
+.deslizador:active::-webkit-slider-thumb {
+  transform: scale(1.12);
 }
 
 .deslizador:focus-visible {
@@ -160,18 +297,13 @@
 }
 
 .deslizador:focus-visible::-webkit-slider-thumb {
-  outline: 3px solid var(--color-primario-400);
-  outline-offset: 2px;
+  outline: 2px solid var(--color-foco);
+  outline-offset: 3px;
 }
 
 .deslizador:focus-visible::-moz-range-thumb {
-  outline: 3px solid var(--color-primario-400);
-  outline-offset: 2px;
-}
-
-@utility cifras {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum', 'cv11';
+  outline: 2px solid var(--color-foco);
+  outline-offset: 3px;
 }
 
 /* Contenido solo para impresión (constancias y pagaré). */

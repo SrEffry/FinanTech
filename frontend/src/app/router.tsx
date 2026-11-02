@@ -4,7 +4,7 @@ import { RutaProtegida } from '../components/layouts/Comunes'
 import { ConsolaLayout } from '../components/layouts/ConsolaLayout'
 import { PortalLayout } from '../components/layouts/PortalLayout'
 import { PublicoLayout } from '../components/layouts/PublicoLayout'
-import { ErrorPagina, InicioRedireccion, NoEncontradaPagina, Raiz } from './Paginas'
+import { ErrorPagina, NoEncontradaPagina, Raiz } from './Paginas'
 
 /** Cada pantalla se carga aparte (división por rutas, RNF-01). */
 function pagina(cargar: () => Promise<{ default: React.ComponentType }>): Pick<RouteObject, 'lazy'> {
@@ -19,7 +19,8 @@ export const router = createBrowserRouter([
     errorElement: <ErrorPagina />,
     hydrateFallbackElement: <CargaPagina />,
     children: [
-      { path: '/', element: <InicioRedireccion /> },
+      // Página de inicio pública (P8, T28); con sesión lleva al inicio del rol (8.1.1).
+      { path: '/', ...pagina(() => import('../features/inicio/InicioPagina')) },
 
       // Acceso (8.1)
       { path: '/ingresar', ...pagina(() => import('../features/acceso/IngresarPagina')) },
