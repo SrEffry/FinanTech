@@ -1,5 +1,6 @@
 import { solicitar } from './cliente'
 import type {
+  ConfirmarRecuperacion,
   Consentimientos,
   DatosRegistro,
   DesafioMfa,
@@ -45,7 +46,12 @@ export function pedirRecuperacion(email: string) {
   return solicitar<{ mensaje: string }>('/identidad/recuperacion', { metodo: 'POST', cuerpo: { email } })
 }
 
-// Registro (RF-01): endpoints reales de Laravel.
+/** Crea la contraseña nueva con el enlace del correo. Responde 422 `enlace_invalido` si venció o ya se usó. */
+export function confirmarRecuperacion(datos: ConfirmarRecuperacion) {
+  return solicitar<{ mensaje: string }>('/identidad/recuperacion/confirmar', { metodo: 'POST', cuerpo: datos })
+}
+
+// Registro (RF-01).
 export function obtenerPoliticaVigente() {
   return solicitar<PoliticaVigente>('/identidad/politica-vigente')
 }

@@ -20,6 +20,7 @@ import { Logo } from '../dominio/Marca'
 import { Button } from '../ui/Button'
 import { Modal } from '../ui/Modal'
 import { BarraNavegacion, SaltarAlContenido } from './Comunes'
+import { useFocoAlNavegar } from './useFocoAlNavegar'
 
 interface Modulo {
   a: string
@@ -100,6 +101,7 @@ function useInactividad(onExpirar: () => void) {
 /** Consola interna (RI-03): barra lateral persistente con los módulos del rol. */
 export function ConsolaLayout() {
   const usuario = useUsuario()
+  useFocoAlNavegar()
   const cerrar = useCerrarSesion()
   const [menuAbierto, setMenuAbierto] = useState(false)
   const { restante, seguir } = useInactividad(() => cerrar.mutate())

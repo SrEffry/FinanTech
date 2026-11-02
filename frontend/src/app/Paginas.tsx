@@ -28,6 +28,7 @@ function PantallaMensaje({ titulo, texto }: { titulo: string; texto: string }) {
     <main className="flex min-h-dvh flex-col items-start justify-center gap-6 px-6 py-12 sm:items-center sm:text-center">
       <Logo />
       <div className="flex max-w-md flex-col gap-2">
+        <title>{`${titulo} · FinanTech`}</title>
         <h1 className="text-2xl font-semibold tracking-tight">{titulo}</h1>
         <p className="text-tinta-suave">{texto}</p>
       </div>

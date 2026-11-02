@@ -14,11 +14,12 @@ import { Field, Textarea } from '../../components/ui/Field'
 import { Alert, Badge, Panel } from '../../components/ui/Feedback'
 import { Modal } from '../../components/ui/Modal'
 import { CargaPagina } from '../../components/ui/Spinner'
-import { useToast } from '../../components/ui/Toast'
+import { useToast } from '../../components/ui/toastContexto'
 import { CuotaConTea } from '../../components/dominio/CuotaConTea'
 import { DesgloseCostos, PlanPagos } from '../../components/dominio/Costos'
 import { DistintivoSimulado } from '../../components/dominio/Distintivos'
-import { Dinero } from '../../components/dominio/Marca'
+import { Dinero, Porcentaje } from '../../components/dominio/Marca'
+import { useServiciosSimulados } from '../acceso/sesion'
 import { EncabezadoPagina } from '../../components/layouts/Comunes'
 
 /** Condición que cambió frente a lo pedido: el valor nuevo junto al original (8.2.5). */
@@ -102,6 +103,9 @@ function VistaOferta({ oferta }: { oferta: Oferta }) {
   const original = oferta.condiciones_originales
   const diasRestantes = Math.ceil(segundosHasta(oferta.vence_en) / 86_400)
   const firmada = oferta.estado === 'firmada'
+  // MR-004: el pagaré lleva la marca mientras la firma electrónica sea la simulada.
+  const serviciosSimulados = useServiciosSimulados()
+  const firmaSimulada = oferta.firma ? oferta.firma.simulada : serviciosSimulados
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
@@ -148,8 +152,9 @@ function VistaOferta({ oferta }: { oferta: Oferta }) {
               El desembolso a tu cuenta llega en la segunda entrega del sistema. Guarda una copia del pagaré y del plan de pagos.
             </p>
             <Button variante="secundario" className="no-imprimir self-start" icono={<Printer aria-hidden="true" className="size-4" />} onClick={() => window.print()}>
-              Descargar pagaré y plan
+              Descargar o imprimir (PDF)
             </Button>
+            <p className="no-imprimir -mt-2 text-xs text-tinta-tenue">Para guardarlo, elige "Guardar como PDF" en la ventana de impresión.</p>
           </div>
         </Panel>
       ) : null}
@@ -165,7 +170,8 @@ function VistaOferta({ oferta }: { oferta: Oferta }) {
           </dl>
           {original && oferta.motivo_condicion ? (
             <Alert tono="info" titulo="Cambiamos algunas condiciones frente a lo que pediste">
-              {oferta.motivo_condicion} Con lo que pediste la cuota habría sido <Dinero valor={original.cuota} />.
+              {oferta.motivo_condicion} Con lo que pediste la cuota habría sido <Dinero valor={original.cuota} className="font-semibold" />{' '}
+              con una TEA de <Porcentaje valor={original.tasa_ea} className="font-semibold" />.
             </Alert>
           ) : null}
         </div>
@@ -181,15 +187,22 @@ function VistaOferta({ oferta }: { oferta: Oferta }) {
 
       <Panel titulo="Pagaré" descripcion={`Versión ${oferta.pagare.version}. Léelo completo antes de firmar.`}>
         <div className="relative">
-          <span aria-hidden="true" className="pointer-events-none absolute inset-0 flex items-center justify-center text-6xl font-bold tracking-widest text-advertencia-500/15 select-none sm:text-8xl">
-            SIMULADO
-          </span>
+          {firmaSimulada ? (
+            <span aria-hidden="true" className="pointer-events-none absolute inset-0 flex items-center justify-center text-6xl font-bold tracking-widest text-advertencia-500/15 select-none sm:text-8xl">
+              SIMULADO
+            </span>
+          ) : null}
           <div tabIndex={0} role="region" aria-label="Texto del pagaré" className="max-h-80 overflow-y-auto rounded-campo border border-linea bg-fondo p-4 text-sm leading-relaxed whitespace-pre-line print:max-h-none">
             {oferta.pagare.texto}
           </div>
         </div>
-        {/* MR-004: el modo simulado se ve también en el documento generado. */}
-        <p className="mt-3 text-xs text-tinta-tenue">Documento de demostración: la firma es simulada y este pagaré no es un título valor.</p>
+        {/* MR-004: el modo simulado se ve también en el documento generado, incluso impreso. */}
+        {firmaSimulada ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <DistintivoSimulado que="Firma simulada" />
+            <p className="text-xs text-tinta-suave">Documento de demostración: la firma es simulada y este pagaré no es un título valor.</p>
+          </div>
+        ) : null}
       </Panel>
 
       {oferta.estado === 'vigente' ? (
@@ -205,8 +218,8 @@ function VistaOferta({ oferta }: { oferta: Oferta }) {
                   setDeclaracion(e.target.checked)
                   setErrorDeclaracion(undefined)
                 }}
+                error={errorDeclaracion}
               />
-              {errorDeclaracion ? <p className="pl-8 text-sm font-medium text-alerta-700">{errorDeclaracion}</p> : null}
             </div>
             {pedirCodigo.isError ? <Alert tono="error">{mensajeDe(pedirCodigo.error)}</Alert> : null}
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
@@ -219,6 +232,7 @@ function VistaOferta({ oferta }: { oferta: Oferta }) {
                 onClick={() => {
                   if (!declaracion) {
                     setErrorDeclaracion('Confirma que leíste y aceptas las condiciones y el pagaré.')
+                    document.getElementById('declaracion')?.focus()
                     return
                   }
                   pedirCodigo.mutate()

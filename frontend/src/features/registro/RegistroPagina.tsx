@@ -15,6 +15,7 @@ import type { RegistroPendiente, TipoDocumento } from '../../lib/api/tipos'
 import { ErrorApi } from '../../lib/api/cliente'
 import { codigoDe, mensajeDe } from '../../lib/errores'
 import { enmascarar, enmascararCorreo, formatoFecha } from '../../lib/formato'
+import { REGLAS_CONTRASENA, esquemaContrasena } from '../../lib/contrasena'
 import { Button } from '../../components/ui/Button'
 import { Checkbox } from '../../components/ui/Choice'
 import { CodeInput, TemporizadorCodigo } from '../../components/ui/CodeInput'
@@ -28,7 +29,7 @@ import { VerificacionIdentidad } from '../identidad/VerificacionIdentidad'
 
 const PASOS = ['Tus datos', 'Privacidad', 'Verificación', 'Identidad']
 
-export const TIPOS_DOCUMENTO: { valor: TipoDocumento; texto: string }[] = [
+const TIPOS_DOCUMENTO: { valor: TipoDocumento; texto: string }[] = [
   { valor: 'CC', texto: 'Cédula de ciudadanía' },
   { valor: 'CE', texto: 'Cédula de extranjería' },
   { valor: 'PA', texto: 'Pasaporte' },
@@ -61,13 +62,7 @@ const esquema = z
       .refine((v) => v <= fechaHace18Anios(), 'Debes ser mayor de 18 años para registrarte.'),
     email: z.string().trim().min(1, 'Escribe tu correo.').email('Escribe un correo válido, como nombre@correo.com.').max(160),
     telefono: z.string().trim().regex(/^3\d{9}$/, 'Ingresa un celular colombiano de 10 dígitos que empiece por 3.'),
-    password: z
-      .string()
-      .min(10, 'Usa al menos 10 caracteres.')
-      .regex(/[a-z]/, 'Incluye al menos una letra minúscula.')
-      .regex(/[A-Z]/, 'Incluye al menos una letra mayúscula.')
-      .regex(/\d/, 'Incluye al menos un número.')
-      .regex(/[^A-Za-z0-9]/, 'Incluye al menos un símbolo, como # o !.'),
+    password: esquemaContrasena,
     password_confirmation: z.string().min(1, 'Repite tu contraseña.'),
   })
   .refine((d) => d.password === d.password_confirmation, {
@@ -77,13 +72,6 @@ const esquema = z
 
 type DatosPersonales = z.infer<typeof esquema>
 const CAMPOS = Object.keys(esquema.shape) as (keyof DatosPersonales)[]
-
-const REGLAS_CONTRASENA = [
-  { texto: 'Al menos 10 caracteres', cumple: (v: string) => v.length >= 10 },
-  { texto: 'Mayúsculas y minúsculas', cumple: (v: string) => /[a-z]/.test(v) && /[A-Z]/.test(v) },
-  { texto: 'Al menos un número', cumple: (v: string) => /\d/.test(v) },
-  { texto: 'Al menos un símbolo', cumple: (v: string) => /[^A-Za-z0-9]/.test(v) },
-]
 
 /** Registro y verificación del cliente (8.1.2, RF-01, RF-02). */
 export default function RegistroPagina() {
@@ -186,6 +174,7 @@ export default function RegistroPagina() {
     <PantallaAcceso ancho="amplio">
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-2">
+          <title>{`Crea tu cuenta: ${PASOS[paso].toLowerCase()} · FinanTech`}</title>
           <h1 className="text-2xl font-semibold tracking-tight">Crea tu cuenta</h1>
           <p className="text-tinta-suave">
             Te toma unos 5 minutos. Ten a mano tu documento y tu celular.{' '}
@@ -196,6 +185,10 @@ export default function RegistroPagina() {
         </div>
 
         <Stepper pasos={PASOS} actual={paso} etiqueta="Progreso del registro" />
+        {/* El cambio de paso no cambia la URL: se anuncia para el lector de pantalla. */}
+        <p className="sr-only" aria-live="polite">
+          Paso {paso + 1} de {PASOS.length}: {PASOS[paso]}
+        </p>
 
         {paso === 0 ? (
           <form noValidate onSubmit={handleSubmit(() => setPaso(1))} className="flex flex-col gap-5">
@@ -284,6 +277,22 @@ export default function RegistroPagina() {
                     {formatoFecha(`${politica.data.vigente_desde}T12:00:00`)})
                   </p>
                   <p className="text-sm leading-relaxed text-tinta-suave">{politica.data.resumen}</p>
+                  {politica.data.texto ? (
+                    // RF-04, RNF-24: consentimiento informado; el texto completo se puede leer aquí mismo.
+                    <details className="text-sm">
+                      <summary className="inline-flex min-h-11 cursor-pointer items-center font-semibold text-primario-700">
+                        Leer la política completa (versión {politica.data.version})
+                      </summary>
+                      <div
+                        tabIndex={0}
+                        role="region"
+                        aria-label="Texto completo de la política de tratamiento de datos"
+                        className="mt-2 max-h-80 overflow-y-auto rounded-campo border border-linea bg-superficie p-4 leading-relaxed whitespace-pre-line text-tinta"
+                      >
+                        {politica.data.texto}
+                      </div>
+                    </details>
+                  ) : null}
                 </div>
 
                 <fieldset className="flex flex-col gap-3">
@@ -325,15 +334,14 @@ export default function RegistroPagina() {
                 <div className="flex flex-col gap-1 border-t border-linea pt-5">
                   <Checkbox
                     id="acepta_politica"
-                    etiqueta="Leí y acepto la política de tratamiento de datos"
+                    etiqueta="Acepto la política de tratamiento de datos"
                     checked={aceptaPolitica}
                     onChange={(e) => {
                       setAceptaPolitica(e.target.checked)
                       setErrorPolitica(undefined)
                     }}
-                    aria-invalid={errorPolitica ? true : undefined}
+                    error={errorPolitica}
                   />
-                  {errorPolitica ? <p className="pl-8 text-sm font-medium text-alerta-700">{errorPolitica}</p> : null}
                 </div>
 
                 {inicio.isError && codigoDe(inicio.error) !== 'validacion' ? (
@@ -363,6 +371,7 @@ export default function RegistroPagina() {
                     onClick={() => {
                       if (!aceptaPolitica) {
                         setErrorPolitica('Debes leer y aceptar la política de tratamiento de datos.')
+                        document.getElementById('acepta_politica')?.focus()
                         return
                       }
                       inicio.mutate()

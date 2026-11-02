@@ -25,6 +25,7 @@ export const router = createBrowserRouter([
       { path: '/ingresar', ...pagina(() => import('../features/acceso/IngresarPagina')) },
       { path: '/ingresar/verificacion', ...pagina(() => import('../features/acceso/SegundoFactorPagina')) },
       { path: '/recuperar', ...pagina(() => import('../features/acceso/RecuperarPagina')) },
+      { path: '/recuperar/nueva', ...pagina(() => import('../features/acceso/NuevaContrasenaPagina')) },
       { path: '/registro', ...pagina(() => import('../features/registro/RegistroPagina')) },
 
       // Simulador para visitantes (RF-05 FA-02)

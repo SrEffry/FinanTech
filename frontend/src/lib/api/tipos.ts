@@ -55,7 +55,23 @@ export interface PoliticaVigente {
   version: string
   vigente_desde: string
   resumen: string
+  /** Texto completo de la política, para leerlo antes de aceptarla (RF-04, D6/UX-04). */
+  texto: string
   finalidades: Finalidad[]
+}
+
+/**
+ * Errores de negocio de los consentimientos (RF-04): `finalidad_invalida` y
+ * `finalidad_necesaria` (no se revoca una finalidad necesaria, RN-18).
+ */
+export type ErrorConsentimiento = 'finalidad_invalida' | 'finalidad_necesaria'
+
+/** `POST identidad/recuperacion/confirmar` (RF-03 FA-04): datos del enlace del correo y la contraseña nueva. */
+export interface ConfirmarRecuperacion {
+  email: string
+  token: string
+  password: string
+  password_confirmation: string
 }
 
 export interface DatosRegistro {
@@ -173,6 +189,8 @@ export interface Simulacion {
   /** Suma del desglose (CP0011). */
   costo_total: number
   total_a_pagar: number
+  /** Monto menos el estudio de crédito, que se descuenta del desembolso (UX-15, RNF-20). */
+  valor_a_recibir: number
   desglose: ConceptoCosto[]
   plan: CuotaPlan[]
   tasa_maxima_legal_ea: number

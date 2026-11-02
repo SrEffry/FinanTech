@@ -10,8 +10,10 @@ import { Field, Textarea } from '../../components/ui/Field'
 import { FileDrop } from '../../components/ui/FileDrop'
 import { Alert, Panel } from '../../components/ui/Feedback'
 import { CargaPagina } from '../../components/ui/Spinner'
-import { useToast } from '../../components/ui/Toast'
+import { useToast } from '../../components/ui/toastContexto'
 import { EncabezadoPagina } from '../../components/layouts/Comunes'
+import { DistintivoSimulado } from '../../components/dominio/Distintivos'
+import { useServiciosSimulados } from '../acceso/sesion'
 
 const TITULO = {
   negada: 'Tu solicitud no fue aprobada',
@@ -31,6 +33,8 @@ export default function ExplicacionPagina() {
   const [adjunto, setAdjunto] = useState<File | null>(null)
   const [error, setError] = useState<string>()
   const explicacion = useQuery({ queryKey: ['explicacion', id], queryFn: () => obtenerExplicacion(id) })
+  // MR-004: la decisión se apoyó en la central de riesgo; si esa consulta es simulada, la constancia lo dice.
+  const simulado = useServiciosSimulados()
 
   const reconsideracion = useMutation({
     mutationFn: () => pedirReconsideracion(id, argumentos.trim(), adjunto ? [adjunto] : []),
@@ -56,9 +60,10 @@ export default function ExplicacionPagina() {
           { etiqueta: e.radicado, a: `/portal/solicitudes/${id}` },
           { etiqueta: 'Decisión' },
         ]}
+        extra={simulado ? <DistintivoSimulado que="Decisión con consulta simulada a centrales de riesgo" /> : undefined}
         acciones={
           <Button variante="secundario" tamano="sm" className="no-imprimir" icono={<Printer aria-hidden="true" className="size-4" />} onClick={() => window.print()}>
-            Descargar constancia
+            Descargar o imprimir (PDF)
           </Button>
         }
       />

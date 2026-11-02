@@ -5,16 +5,15 @@ import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryRouter, RouterProvider } from 'react-router'
-import { ErrorApi } from '../lib/api/cliente'
-import { iniciarSesion } from '../lib/api/identidad'
 import { reiniciarDb } from '../mocks/db'
-import { handlersSesion } from '../mocks/handlers/sesion'
-import { CONTRASENA_DEMO, FINALIDADES } from '../mocks/semilla'
+import { FINALIDADES } from '../mocks/semilla'
 import { ToastProvider } from '../components/ui/Toast'
 import RegistroPagina from './registro/RegistroPagina'
 
+// La sesión y el registro son reales (Laravel): sus reglas (RN-17, CP0009) se prueban en
+// backend/tests/Feature/Identidad. Aquí solo se simula lo que la pantalla necesita leer.
 const servidor = setupServer(
-  ...handlersSesion,
+  http.get('/api/v1/identidad/sesion', () => HttpResponse.json({ usuario: null })),
   http.get('/api/v1/identidad/politica-vigente', () =>
     HttpResponse.json({ version: '1.0', vigente_desde: '2026-10-01', resumen: 'Resumen de la política.', finalidades: FINALIDADES }),
   ),
@@ -26,39 +25,6 @@ afterAll(() => servidor.close())
 beforeEach(() => {
   localStorage.clear()
   reiniciarDb()
-})
-
-async function errorDe(promesa: Promise<unknown>): Promise<ErrorApi> {
-  try {
-    await promesa
-  } catch (error) {
-    if (error instanceof ErrorApi) return error
-    throw error
-  }
-  throw new Error('Se esperaba un error')
-}
-
-describe('inicio de sesión (RN-17, CP0009)', () => {
-  it('responde lo mismo si el correo no existe o si la contraseña está mal', async () => {
-    const inexistente = await errorDe(iniciarSesion('nadie@demo.finantech.co', 'Cualquiera#2026'))
-    const contrasenaMala = await errorDe(iniciarSesion('laura.mejia@demo.finantech.co', 'Equivocada#2026'))
-    expect(inexistente.codigo).toBe(contrasenaMala.codigo)
-    expect(inexistente.message).toBe(contrasenaMala.message)
-    expect(inexistente.estado).toBe(contrasenaMala.estado)
-  })
-
-  it('bloquea a los 5 intentos fallidos, exista o no la cuenta (RN-12)', async () => {
-    for (let i = 0; i < 4; i++) await errorDe(iniciarSesion('nadie@demo.finantech.co', 'Mala#2026xx'))
-    const quinto = await errorDe(iniciarSesion('nadie@demo.finantech.co', 'Mala#2026xx'))
-    expect(quinto.codigo).toBe('cuenta_bloqueada')
-    expect(quinto.estado).toBe(423)
-  }, 15_000)
-
-  it('con credenciales correctas pide el segundo factor', async () => {
-    const desafio = await iniciarSesion('laura.mejia@demo.finantech.co', CONTRASENA_DEMO)
-    expect(desafio.desafio_id).toBeTruthy()
-    expect(desafio.enviado_a).toBe('l•••@demo.finantech.co')
-  })
 })
 
 describe('registro (RF-01)', () => {
@@ -92,7 +58,7 @@ describe('registro (RF-01)', () => {
       expect(screen.getByText(finalidad.nombre)).toBeInTheDocument()
       expect(screen.queryByRole('checkbox', { name: finalidad.nombre })).toBeNull()
     }
-    expect(screen.getByRole('checkbox', { name: /acepto la política/ })).not.toBeChecked()
+    expect(screen.getByRole('checkbox', { name: /acepto la política/i })).not.toBeChecked()
   }, 20_000)
 
   it('rechaza a menores de 18 años en el formulario (RN-03)', async () => {

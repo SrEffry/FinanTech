@@ -1,21 +1,6 @@
 import { useId, useState, type DragEvent } from 'react'
 import { FileText, Upload } from 'lucide-react'
-
-export const TIPOS_PERMITIDOS = ['image/jpeg', 'image/png', 'application/pdf']
-export const TAMANO_MAXIMO = 10 * 1024 * 1024
-
-/** RN-30: JPG, PNG o PDF de máximo 10 MB, revisado en el momento de la captura. */
-export function validarArchivo(archivo: File): string | null {
-  if (!TIPOS_PERMITIDOS.includes(archivo.type)) return 'Sube el documento en JPG, PNG o PDF.'
-  if (archivo.size > TAMANO_MAXIMO) return 'El archivo pesa más de 10 MB. Comprímelo o tómale una foto.'
-  if (archivo.size === 0) return 'El archivo está vacío. Elige otro.'
-  return null
-}
-
-export function formatoTamano(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
-  return `${(bytes / (1024 * 1024)).toLocaleString('es-CO', { maximumFractionDigits: 1 })} MB`
-}
+import { TIPOS_PERMITIDOS, formatoTamano, validarArchivo } from '../../lib/archivos'
 
 interface Props {
   etiqueta: string
@@ -27,9 +12,11 @@ interface Props {
   cargando?: boolean
   /** Abre la cámara del celular: trasera para documentos, frontal para el rostro. */
   captura?: 'user' | 'environment'
+  /** Formatos aceptados; por defecto JPG, PNG o PDF (RN-30). */
+  tipos?: readonly string[]
 }
 
-export function FileDrop({ etiqueta, descripcion, onSeleccionar, archivoActual, error, deshabilitado, cargando, captura }: Props) {
+export function FileDrop({ etiqueta, descripcion, onSeleccionar, archivoActual, error, deshabilitado, cargando, captura, tipos = TIPOS_PERMITIDOS }: Props) {
   const id = useId()
   const [errorLocal, setErrorLocal] = useState<string | null>(null)
   const [encima, setEncima] = useState(false)
@@ -37,7 +24,7 @@ export function FileDrop({ etiqueta, descripcion, onSeleccionar, archivoActual, 
 
   function recibir(archivo: File | undefined) {
     if (!archivo) return
-    const problema = validarArchivo(archivo)
+    const problema = validarArchivo(archivo, tipos)
     setErrorLocal(problema)
     if (!problema) onSeleccionar(archivo)
   }
@@ -85,7 +72,7 @@ export function FileDrop({ etiqueta, descripcion, onSeleccionar, archivoActual, 
           id={id}
           type="file"
           className="sr-only"
-          accept={TIPOS_PERMITIDOS.join(',')}
+          accept={tipos.join(',')}
           capture={captura}
           disabled={deshabilitado || cargando}
           aria-describedby={mensajeError ? `${id}-error` : undefined}
@@ -96,6 +83,31 @@ export function FileDrop({ etiqueta, descripcion, onSeleccionar, archivoActual, 
           }}
         />
       </label>
+      {captura ? (
+        // RI-06: con `capture` muchos celulares abren solo la cámara. Esta es la alternativa
+        // para quien no puede o no quiere tomar la foto en el momento.
+        <label
+          htmlFor={`${id}-archivo`}
+          className={`inline-flex min-h-11 cursor-pointer items-center self-start rounded-campo text-sm font-semibold text-primario-700 underline-offset-4 focus-within:outline-3 focus-within:outline-primario-400 hover:underline ${
+            deshabilitado || cargando ? 'pointer-events-none opacity-60' : ''
+          }`}
+        >
+          O elige un archivo guardado
+          <span className="sr-only">: {etiqueta}</span>
+          <input
+            id={`${id}-archivo`}
+            type="file"
+            className="sr-only"
+            accept={tipos.join(',')}
+            disabled={deshabilitado || cargando}
+            aria-describedby={mensajeError ? `${id}-error` : undefined}
+            onChange={(e) => {
+              recibir(e.target.files?.[0])
+              e.target.value = ''
+            }}
+          />
+        </label>
+      ) : null}
       {mensajeError ? (
         <p id={`${id}-error`} role="alert" className="text-sm font-medium text-alerta-700">
           {mensajeError}

@@ -4,13 +4,14 @@ import { FileText } from 'lucide-react'
 import { obtenerEvaluacion } from '../../lib/api/consola'
 import type { Concepto, Expediente } from '../../lib/api/tipos'
 import { codigoDe, mensajeDe } from '../../lib/errores'
-import { formatoFecha, formatoFechaHora, formatoMoneda } from '../../lib/formato'
+import { enmascarar, formatoFecha, formatoFechaHora, formatoMoneda } from '../../lib/formato'
 import { Alert, Badge, Panel } from '../../components/ui/Feedback'
-import { formatoTamano } from '../../components/ui/FileDrop'
+import { formatoTamano } from '../../lib/archivos'
 import { Skeleton } from '../../components/ui/Spinner'
 import { DistintivoSimulado } from '../../components/dominio/Distintivos'
 import { EstadoBadge } from '../../components/dominio/Estado'
 import { ContribucionVariables, MedidorPuntaje } from '../../components/dominio/Evaluacion'
+import { useServiciosSimulados } from '../acceso/sesion'
 
 const KYC = { pendiente: 'Pendiente', verificado: 'Verificada', revision_manual: 'En revisión manual', bloqueado: 'Bloqueada' }
 const OCUPACION = { empleado: 'Empleado', independiente: 'Independiente', pensionado: 'Pensionado', '': 'Sin dato' }
@@ -31,16 +32,22 @@ function Dato({ etiqueta, children }: { etiqueta: string; children: React.ReactN
 
 export function PanelSolicitante({ expediente }: { expediente: Expediente }) {
   const { solicitante: s } = expediente
+  const simulado = useServiciosSimulados()
   return (
     <Panel titulo="Solicitante">
       <dl className="grid gap-4 sm:grid-cols-3">
         <Dato etiqueta="Nombre">{s.nombre_completo}</Dato>
-        <Dato etiqueta="Documento">{s.documento_enmascarado}</Dato>
+        <Dato etiqueta="Documento">{enmascarar(s.documento_enmascarado)}</Dato>
         <Dato etiqueta="Edad">{s.edad} años</Dato>
         <Dato etiqueta="Correo">{s.email}</Dato>
-        <Dato etiqueta="Celular">{s.telefono_enmascarado}</Dato>
+        <Dato etiqueta="Celular">{enmascarar(s.telefono_enmascarado)}</Dato>
         <Dato etiqueta="Cliente desde">{formatoFecha(s.cliente_desde)}</Dato>
-        <Dato etiqueta="Identidad">{KYC[s.estado_kyc]}</Dato>
+        <Dato etiqueta="Identidad">
+          <span className="flex flex-wrap items-center gap-2">
+            {KYC[s.estado_kyc]}
+            {simulado && s.estado_kyc !== 'pendiente' ? <DistintivoSimulado que="Verificación simulada" /> : null}
+          </span>
+        </Dato>
       </dl>
     </Panel>
   )
@@ -64,7 +71,7 @@ export function PanelIngresos({ expediente }: { expediente: Expediente }) {
           </Dato>
         ) : null}
         <Dato etiqueta="Referencia">
-          {referencia.nombre}, celular terminado en {referencia.celular.slice(-4)}
+          {referencia.nombre}, celular {enmascarar(referencia.celular)}
         </Dato>
       </dl>
     </Panel>

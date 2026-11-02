@@ -3,11 +3,14 @@ import type { InputHTMLAttributes, ReactNode } from 'react'
 interface PropsCasilla extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
   etiqueta: ReactNode
   descripcion?: ReactNode
+  /** Error asociado a la casilla: se anuncia con ella (aria-invalid y aria-describedby). */
+  error?: string
   ref?: React.Ref<HTMLInputElement>
 }
 
 /** Casilla con etiqueta clicable completa (área táctil de 44 px). */
-export function Checkbox({ etiqueta, descripcion, id, className = '', disabled, ...props }: PropsCasilla) {
+export function Checkbox({ etiqueta, descripcion, error, id, className = '', disabled, ...props }: PropsCasilla) {
+  const describedBy = [descripcion ? `${id}-descripcion` : null, error ? `${id}-error` : null].filter(Boolean).join(' ')
   return (
     <div className={`flex gap-3 ${className}`}>
       <span className="flex min-h-11 items-start pt-0.5">
@@ -15,7 +18,8 @@ export function Checkbox({ etiqueta, descripcion, id, className = '', disabled, 
           id={id}
           type="checkbox"
           disabled={disabled}
-          aria-describedby={descripcion ? `${id}-descripcion` : undefined}
+          aria-describedby={describedBy || undefined}
+          aria-invalid={error ? true : undefined}
           className="mt-0.5 size-5 shrink-0 cursor-pointer rounded border-linea accent-primario-600 disabled:cursor-not-allowed"
           {...props}
         />
@@ -27,6 +31,11 @@ export function Checkbox({ etiqueta, descripcion, id, className = '', disabled, 
         {descripcion ? (
           <span id={`${id}-descripcion`} className="text-sm text-tinta-tenue">
             {descripcion}
+          </span>
+        ) : null}
+        {error ? (
+          <span id={`${id}-error`} className="text-sm font-medium text-alerta-700">
+            {error}
           </span>
         ) : null}
       </span>

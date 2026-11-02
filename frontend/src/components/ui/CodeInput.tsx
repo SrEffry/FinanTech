@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { formatoCuentaRegresiva, segundosHasta } from '../../lib/formato'
+import { formatoCuentaRegresiva } from '../../lib/formato'
+import { useCuentaRegresiva } from '../../lib/useCuentaRegresiva'
 import { Field, Input } from './Field'
 
 interface Props {
@@ -34,17 +34,6 @@ export function CodeInput({ id, etiqueta, valor, onCambiar, error, ayuda, enfoca
       />
     </Field>
   )
-}
-
-/** Segundos que faltan hasta `iso`, actualizados cada segundo. */
-export function useCuentaRegresiva(iso: string | null | undefined): number {
-  const [ahora, setAhora] = useState(() => Date.now())
-  useEffect(() => {
-    if (!iso) return
-    const intervalo = window.setInterval(() => setAhora(Date.now()), 1000)
-    return () => window.clearInterval(intervalo)
-  }, [iso])
-  return iso ? segundosHasta(iso, ahora) : 0
 }
 
 /** Temporizador de vigencia y botón de reenvío habilitado a los 60 s (8.1.3). */

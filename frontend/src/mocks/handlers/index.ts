@@ -1,21 +1,19 @@
 import { handlersAdministracion } from './administracion'
 import { handlersConsola } from './consola'
-import { handlersIdentidad } from './identidad'
 import { handlersOfertas } from './ofertas'
-import { handlersRegistro } from './registro'
-import { handlersSesion } from './sesion'
-import { handlersSimulacion } from './simulacion'
+import { handlersPuenteSesion } from './puenteSesion'
 import { handlersSolicitudes } from './solicitudes'
 
 /**
  * Endpoints simulados. Cuando Laravel implemente uno, se borra su handler: la petición
  * pasa sola al backend real (onUnhandledRequest: 'bypass').
+ *
+ * Ya son reales (01/11/2026): registro (RF-01), sesión (RF-03), verificación de identidad
+ * (RF-02), consentimientos (RF-04), recuperación, `sistema/estado` y simulación (RF-05).
+ * `puenteSesion` no simula nada: deja pasar la sesión real y la enlaza con la base simulada.
  */
 export const handlers = [
-  ...handlersSesion,
-  ...handlersRegistro,
-  ...handlersIdentidad,
-  ...handlersSimulacion,
+  ...handlersPuenteSesion,
   ...handlersSolicitudes,
   ...handlersOfertas,
   ...handlersConsola,

@@ -9,7 +9,7 @@ import { Button } from '../../components/ui/Button'
 import { CodeInput, TemporizadorCodigo } from '../../components/ui/CodeInput'
 import { Alert } from '../../components/ui/Feedback'
 import { PantallaAcceso } from '../../components/layouts/PublicoLayout'
-import { CLAVE_SESION, inicioDeRol } from './sesion'
+import { CLAVE_SESION, inicioDeRol, rutaSegura } from './sesion'
 
 interface Estado {
   desafio: DesafioMfa
@@ -30,8 +30,10 @@ export default function SegundoFactorPagina() {
   const verificacion = useMutation({
     mutationFn: () => verificarSegundoFactor(desafio!.desafio_id, codigo),
     onSuccess: ({ usuario }) => {
+      // Nada de lo que quedó en caché de una sesión anterior se muestra a la nueva.
+      cliente.removeQueries()
       cliente.setQueryData(CLAVE_SESION, usuario)
-      navegar(estado?.volver ?? inicioDeRol(usuario.rol), { replace: true })
+      navegar(rutaSegura(estado?.volver) ?? inicioDeRol(usuario.rol), { replace: true })
     },
     onError: (error) => {
       if (error instanceof ErrorApi && error.codigo === 'codigo_incorrecto') {
@@ -68,6 +70,7 @@ export default function SegundoFactorPagina() {
     <PantallaAcceso>
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-2">
+          <title>Confirma que eres tú · FinanTech</title>
           <h1 className="text-2xl font-semibold tracking-tight">Confirma que eres tú</h1>
           <p className="text-tinta-suave">
             Te enviamos un código de 6 dígitos a <span className="font-semibold text-tinta">{desafio.enviado_a}</span>.

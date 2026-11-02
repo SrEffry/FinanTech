@@ -6,7 +6,7 @@ import { obtenerProductos } from '../../lib/api/simulacion'
 import type { FiltrosBandeja, ItemBandeja, Semaforo } from '../../lib/api/tipos'
 import { mensajeDe } from '../../lib/errores'
 import { useFiltrosUrl } from '../../lib/useFiltrosUrl'
-import { antiguedad, formatoFechaHora, formatoMoneda } from '../../lib/formato'
+import { antiguedad, enmascarar, formatoFechaHora, formatoMoneda } from '../../lib/formato'
 import { Button } from '../../components/ui/Button'
 import { DataTable, type Columna } from '../../components/ui/DataTable'
 import { Field, Select } from '../../components/ui/Field'
@@ -83,7 +83,7 @@ export default function BandejaPagina() {
       celda: (i) => (
         <span className="flex flex-col">
           <span className="font-medium">{i.cliente}</span>
-          <span className="text-xs text-tinta-tenue">{i.documento_enmascarado}</span>
+          <span className="text-xs text-tinta-tenue">{enmascarar(i.documento_enmascarado)}</span>
         </span>
       ),
     },

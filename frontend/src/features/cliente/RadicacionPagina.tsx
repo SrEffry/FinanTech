@@ -10,7 +10,7 @@ import { crearSolicitud, guardarBorrador, obtenerSolicitud, radicar } from '../.
 import type { CambiosBorrador, Producto, SolicitudDetalle } from '../../lib/api/tipos'
 import { ErrorApi } from '../../lib/api/cliente'
 import { codigoDe, mensajeDe } from '../../lib/errores'
-import { formatoFecha, formatoMoneda, formatoPorcentaje } from '../../lib/formato'
+import { enmascarar, formatoFecha, formatoMoneda, formatoPorcentaje } from '../../lib/formato'
 import { Button, ButtonLink } from '../../components/ui/Button'
 import { Checkbox } from '../../components/ui/Choice'
 import { DatoBloqueado, Field, Input, Select } from '../../components/ui/Field'
@@ -18,9 +18,9 @@ import { Alert, Panel } from '../../components/ui/Feedback'
 import { MoneyInput } from '../../components/ui/MoneyInput'
 import { CargaPagina } from '../../components/ui/Spinner'
 import { Stepper } from '../../components/ui/Stepper'
-import { useToast } from '../../components/ui/Toast'
+import { useToast } from '../../components/ui/toastContexto'
 import { CuotaConTea } from '../../components/dominio/CuotaConTea'
-import { Dinero } from '../../components/dominio/Marca'
+import { Dinero, Porcentaje } from '../../components/dominio/Marca'
 import { EncabezadoPagina } from '../../components/layouts/Comunes'
 import { useUsuario } from '../acceso/sesion'
 import { leerSimulacion, olvidarSimulacion } from '../simulacion/simulacionGuardada'
@@ -66,6 +66,7 @@ function InicioSolicitud() {
   if (productos.isError) return <Alert tono="error">{mensajeDe(productos.error)}</Alert>
 
   const producto = productos.data.find((p) => p.codigo === codigo) ?? productos.data[0]
+  if (!producto) return <Alert tono="info">En este momento no hay productos disponibles. Vuelve a intentarlo más tarde.</Alert>
   const montoFuera = monto !== null && (monto < producto.monto_min || monto > producto.monto_max)
   const plazoFuera = plazo !== null && (plazo < producto.plazo_min || plazo > producto.plazo_max)
   const activa = creacion.error instanceof ErrorApi && creacion.error.codigo === 'solicitud_activa' ? String(creacion.error.datos?.solicitud_id ?? '') : null
@@ -301,6 +302,10 @@ function EditorBorrador({ solicitud, producto }: { solicitud: SolicitudDetalle; 
       />
       <div className="mb-6">
         <Stepper pasos={SECCIONES} actual={seccion} etiqueta="Progreso de la solicitud" />
+        {/* La sección cambia sin cambiar la URL: se anuncia para el lector de pantalla (WCAG 4.1.3). */}
+        <p className="sr-only" aria-live="polite">
+          Paso {seccion + 1} de {SECCIONES.length}: {SECCIONES[seccion]}
+        </p>
       </div>
 
       <Panel>
@@ -341,10 +346,10 @@ function EditorBorrador({ solicitud, producto }: { solicitud: SolicitudDetalle; 
               <p className="text-sm text-tinta-suave">Estos datos ya los tenemos de tu registro: no te los volvemos a pedir.</p>
               <dl className="grid gap-3 sm:grid-cols-2">
                 <DatoBloqueado etiqueta="Nombre" valor={conocidos.nombre_completo} />
-                <DatoBloqueado etiqueta="Documento" valor={conocidos.documento_enmascarado} />
+                <DatoBloqueado etiqueta="Documento" valor={enmascarar(conocidos.documento_enmascarado)} />
                 <DatoBloqueado etiqueta="Fecha de nacimiento" valor={formatoFecha(`${conocidos.fecha_nacimiento}T12:00:00`)} />
                 <DatoBloqueado etiqueta="Correo" valor={conocidos.email} />
-                <DatoBloqueado etiqueta="Celular" valor={conocidos.telefono_enmascarado} />
+                <DatoBloqueado etiqueta="Celular" valor={enmascarar(conocidos.telefono_enmascarado)} />
               </dl>
               <p className="text-sm text-tinta-tenue">
                 ¿Algo cambió? Actualízalo desde <Link to="/portal/privacidad" className="font-semibold text-primario-700 hover:underline">Mis datos y privacidad</Link>.
@@ -406,7 +411,8 @@ function EditorBorrador({ solicitud, producto }: { solicitud: SolicitudDetalle; 
                     </Button>
                   }
                 >
-                  La cuota estimada de <Dinero valor={capacidad.cuota_estimada} /> es el {capacidad.porcentaje.toLocaleString('es-CO')} % de lo que te
+                  La cuota estimada de <Dinero valor={capacidad.cuota_estimada} className="font-semibold" /> (TEA{' '}
+                  <Porcentaje valor={solicitud.tasa_ea} className="font-semibold" />) es el {capacidad.porcentaje.toLocaleString('es-CO')} % de lo que te
                   queda disponible (<Dinero valor={capacidad.ingreso_disponible} />). El máximo que aprobamos es el {capacidad.limite} %. Puedes radicar igual,
                   pero es probable que no sea aprobada así.
                 </Alert>
@@ -473,15 +479,10 @@ function EditorBorrador({ solicitud, producto }: { solicitud: SolicitudDetalle; 
                       field.onChange(e.target.checked)
                       setFaltaAutorizacion(false)
                     }}
-                    aria-invalid={faltaAutorizacion || undefined}
+                    error={faltaAutorizacion ? 'Marca la autorización para poder radicar.' : undefined}
                   />
                 )}
               />
-              {faltaAutorizacion ? (
-                <p role="alert" className="-mt-3 pl-8 text-sm font-medium text-alerta-700">
-                  Marca la autorización para poder radicar (RN-33).
-                </p>
-              ) : null}
               {radicacion.isError && codigoDe(radicacion.error) !== 'documentos_incompletos' ? <Alert tono="error">{mensajeDe(radicacion.error)}</Alert> : null}
             </section>
           ) : null}
@@ -503,6 +504,7 @@ function EditorBorrador({ solicitud, producto }: { solicitud: SolicitudDetalle; 
                 onClick={() => {
                   if (!getValues('acepta_consulta_centrales')) {
                     setFaltaAutorizacion(true)
+                    document.getElementById('acepta_consulta_centrales')?.focus()
                     return
                   }
                   radicacion.mutate()

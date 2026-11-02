@@ -13,19 +13,7 @@ import { Dinero } from '../../components/dominio/Marca'
 import { EstadoBadge } from '../../components/dominio/Estado'
 import { useUsuario } from '../acceso/sesion'
 import { leerSimulacion, rutaSolicitar } from '../simulacion/simulacionGuardada'
-
-export function rutaAccion(solicitud: SolicitudResumen, accion: AccionPendiente): string {
-  switch (accion.tipo) {
-    case 'oferta':
-      return `/portal/ofertas/${accion.oferta_id}`
-    case 'decision':
-      return `/portal/solicitudes/${solicitud.id}/decision`
-    case 'borrador':
-      return `/portal/solicitar/${solicitud.id}`
-    default:
-      return `/portal/solicitudes/${solicitud.id}`
-  }
-}
+import { rutaAccion } from './rutaAccion'
 
 const BOTON_ACCION: Record<AccionPendiente['tipo'], string> = {
   oferta: 'Revisar oferta',
@@ -82,7 +70,10 @@ export default function PanelClientePagina() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Hola, {usuario.nombre_corto}</h1>
+        <title>Inicio · FinanTech</title>
+        <h1 tabIndex={-1} className="text-2xl font-semibold tracking-tight outline-none">
+          Hola, {usuario.nombre_corto}
+        </h1>
         <p className="text-tinta-suave">
           {pendientes.length > 0
             ? `Tienes ${pendientes.length === 1 ? 'una acción pendiente' : `${pendientes.length} acciones pendientes`}.`

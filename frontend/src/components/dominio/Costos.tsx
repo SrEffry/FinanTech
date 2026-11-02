@@ -11,13 +11,15 @@ interface PropsDesglose {
   desglose: ConceptoCosto[]
   costoTotal: number
   totalAPagar: number
+  /** Lo que llega a la cuenta: el monto menos el estudio de crédito (UX-15, RNF-20). */
+  valorARecibir?: number
 }
 
 /**
  * Desglose completo de costos (RN-24) con la composición de lo que se paga: lo que te
  * prestan frente a lo que cuesta el crédito. La lista es la vista en texto de la barra.
  */
-export function DesgloseCostos({ monto, desglose, costoTotal, totalAPagar }: PropsDesglose) {
+export function DesgloseCostos({ monto, desglose, costoTotal, totalAPagar, valorARecibir }: PropsDesglose) {
   const proporcionCapital = totalAPagar > 0 ? (monto / totalAPagar) * 100 : 0
   return (
     <div className="flex flex-col gap-4">
@@ -40,14 +42,13 @@ export function DesgloseCostos({ monto, desglose, costoTotal, totalAPagar }: Pro
 
       <dl className="divide-y divide-linea-suave">
         {desglose.map((c) => (
-          <div key={c.concepto} className="flex items-start justify-between gap-4 py-3">
-            <div className="flex flex-col gap-0.5">
-              <dt className="font-medium text-tinta">{c.concepto}</dt>
-              <dd className="text-sm text-tinta-tenue">{c.descripcion}</dd>
-            </div>
-            <dd className="cifras shrink-0 font-semibold text-tinta">
+          // Cada concepto con su valor y su explicación como dos `dd` del mismo `dt` (WCAG 1.3.1).
+          <div key={c.concepto} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-0.5 py-3">
+            <dt className="font-medium text-tinta">{c.concepto}</dt>
+            <dd className="cifras text-right font-semibold text-tinta">
               <Dinero valor={c.valor} />
             </dd>
+            <dd className="text-sm text-tinta-tenue">{c.descripcion}</dd>
           </div>
         ))}
         <div className="flex items-center justify-between gap-4 py-3">
@@ -62,6 +63,18 @@ export function DesgloseCostos({ monto, desglose, costoTotal, totalAPagar }: Pro
             <Dinero valor={totalAPagar} />
           </dd>
         </div>
+        {valorARecibir !== undefined ? (
+          // RNF-20: ningún costo se descubre después; se dice cuánto dinero llega de verdad.
+          <div className="-mx-3 flex items-center justify-between gap-4 rounded-campo bg-primario-50 px-3 py-3">
+            <dt className="font-semibold text-tinta">
+              Te consignamos
+              <span className="block text-sm font-normal text-tinta-suave">El préstamo menos el estudio de crédito.</span>
+            </dt>
+            <dd className="cifras font-semibold text-tinta">
+              <Dinero valor={valorARecibir} />
+            </dd>
+          </div>
+        ) : null}
       </dl>
     </div>
   )
@@ -79,7 +92,8 @@ function planCsv(plan: CuotaPlan[]): Blob {
 /** Plan de pagos completo, descargable (RF-05, criterio de aceptación). */
 export function PlanPagos({ plan, nombreArchivo = 'plan-de-pagos.csv' }: { plan: CuotaPlan[]; nombreArchivo?: string }) {
   const [completo, setCompleto] = useState(false)
-  const visibles = completo ? plan : plan.slice(0, 6)
+  // Contraído se ven 6 cuotas, pero al imprimir (constancia y pagaré) sale el plan completo (RNF-20).
+  const oculta = (indice: number) => !completo && indice >= 6
   return (
     <div className="flex flex-col gap-3">
       <div role="region" aria-label="Plan de pagos" tabIndex={0} className="overflow-x-auto rounded-campo border border-linea">
@@ -97,8 +111,8 @@ export function PlanPagos({ plan, nombreArchivo = 'plan-de-pagos.csv' }: { plan:
             </tr>
           </thead>
           <tbody>
-            {visibles.map((c) => (
-              <tr key={c.numero} className="border-b border-linea-suave text-right last:border-b-0">
+            {plan.map((c, i) => (
+              <tr key={c.numero} className={`border-b border-linea-suave text-right last:border-b-0 ${oculta(i) ? 'hidden print:table-row' : ''}`}>
                 <td className="px-3 py-2 text-left">{c.numero}</td>
                 <td className="px-3 py-2 text-left whitespace-nowrap text-tinta-suave">{formatoFechaCorta(c.fecha)}</td>
                 <td className="px-3 py-2 font-medium">{formatoMoneda(c.cuota)}</td>
@@ -113,13 +127,14 @@ export function PlanPagos({ plan, nombreArchivo = 'plan-de-pagos.csv' }: { plan:
       </div>
       <div className="flex flex-wrap gap-2">
         {plan.length > 6 ? (
-          <Button variante="fantasma" tamano="sm" onClick={() => setCompleto((v) => !v)} aria-expanded={completo}>
+          <Button variante="fantasma" tamano="sm" className="no-imprimir" onClick={() => setCompleto((v) => !v)} aria-expanded={completo}>
             {completo ? 'Ver menos cuotas' : `Ver las ${plan.length} cuotas`}
           </Button>
         ) : null}
         <Button
           variante="fantasma"
           tamano="sm"
+          className="no-imprimir"
           icono={<Download aria-hidden="true" className="size-4" />}
           onClick={() => guardarArchivo(planCsv(plan), nombreArchivo)}
         >

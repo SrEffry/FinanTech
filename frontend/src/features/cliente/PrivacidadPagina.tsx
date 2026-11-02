@@ -1,16 +1,13 @@
-import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Lock } from 'lucide-react'
 import { cambiarConsentimiento, obtenerConsentimientos } from '../../lib/api/identidad'
 import type { FinalidadConEstado } from '../../lib/api/tipos'
 import { mensajeDe } from '../../lib/errores'
-import { formatoFecha, formatoFechaHora } from '../../lib/formato'
-import { Button } from '../../components/ui/Button'
+import { enmascarar, formatoFecha, formatoFechaHora } from '../../lib/formato'
 import { Switch } from '../../components/ui/Choice'
 import { Alert, Badge, Panel } from '../../components/ui/Feedback'
-import { Modal } from '../../components/ui/Modal'
 import { CargaPagina } from '../../components/ui/Spinner'
-import { useToast } from '../../components/ui/Toast'
+import { useToast } from '../../components/ui/toastContexto'
 import { EncabezadoPagina } from '../../components/layouts/Comunes'
 import { useUsuario } from '../acceso/sesion'
 
@@ -23,7 +20,6 @@ export default function PrivacidadPagina() {
   const usuario = useUsuario()
   const cliente = useQueryClient()
   const { avisar } = useToast()
-  const [confirmar, setConfirmar] = useState<FinalidadConEstado | null>(null)
   const consentimientos = useQuery({ queryKey: ['consentimientos'], queryFn: obtenerConsentimientos })
 
   const cambio = useMutation({
@@ -31,7 +27,6 @@ export default function PrivacidadPagina() {
       cambiarConsentimiento(finalidad.codigo, otorgar ? 'otorga' : 'revoca'),
     onSuccess: (datos, { finalidad, otorgar }) => {
       cliente.setQueryData(['consentimientos'], datos)
-      setConfirmar(null)
       avisar(otorgar ? `Autorizaste: ${finalidad.nombre}.` : `Revocaste: ${finalidad.nombre}. Surte efecto en máximo 24 horas.`)
     },
     onError: (error) => avisar(mensajeDe(error), 'error'),
@@ -42,14 +37,16 @@ export default function PrivacidadPagina() {
   const { politica, finalidades, historial } = consentimientos.data
 
   function alternar(finalidad: FinalidadConEstado, otorgar: boolean) {
-    // RF-04 FA-01: revocar una finalidad necesaria termina la relación; se confirma antes.
-    if (finalidad.necesaria && !otorgar) setConfirmar(finalidad)
-    else cambio.mutate({ finalidad, otorgar })
+    cambio.mutate({ finalidad, otorgar })
   }
 
   const grupos = [
-    { titulo: 'Necesarias para darte el servicio', lista: finalidades.filter((f) => f.necesaria) },
-    { titulo: 'Opcionales', lista: finalidades.filter((f) => !f.necesaria) },
+    {
+      titulo: 'Necesarias para darte el servicio',
+      descripcion: 'Sin estas no podemos prestarte el servicio. Si quieres que dejemos de usarlas, escríbenos por los canales de atención.',
+      lista: finalidades.filter((f) => f.necesaria),
+    },
+    { titulo: 'Opcionales', descripcion: 'Tú decides. Puedes cambiarlas cuando quieras.', lista: finalidades.filter((f) => !f.necesaria) },
   ]
 
   return (
@@ -67,7 +64,7 @@ export default function PrivacidadPagina() {
           </div>
           <div>
             <dt className="text-tinta-tenue">Documento</dt>
-            <dd className="font-medium">{usuario.documento_enmascarado}</dd>
+            <dd className="font-medium">{enmascarar(usuario.documento_enmascarado)}</dd>
           </div>
           <div>
             <dt className="text-tinta-tenue">Correo</dt>
@@ -80,7 +77,7 @@ export default function PrivacidadPagina() {
       </Panel>
 
       {grupos.map((grupo) => (
-        <Panel key={grupo.titulo} titulo={grupo.titulo}>
+        <Panel key={grupo.titulo} titulo={grupo.titulo} descripcion={grupo.descripcion}>
           <ul className="flex flex-col divide-y divide-linea-suave">
             {grupo.lista.map((f) => (
               <li key={f.codigo} className="flex items-start justify-between gap-4 py-4 first:pt-0 last:pb-0">
@@ -98,14 +95,20 @@ export default function PrivacidadPagina() {
                     </span>
                   ) : null}
                 </div>
-                <Switch
-                  id={`finalidad-${f.codigo}`}
-                  etiqueta={f.nombre}
-                  describedBy={`descripcion-${f.codigo}`}
-                  activo={f.otorgada}
-                  disabled={cambio.isPending}
-                  onCambiar={(otorgar) => alternar(f, otorgar)}
-                />
+                {f.necesaria && f.otorgada ? (
+                  // RN-18: las necesarias no se revocan desde aquí (el servidor responde
+                  // 422 finalidad_necesaria). Se muestran como autorizadas, sin interruptor.
+                  <span className="shrink-0 text-sm font-medium text-tinta-suave">Autorizada</span>
+                ) : (
+                  <Switch
+                    id={`finalidad-${f.codigo}`}
+                    etiqueta={f.nombre}
+                    describedBy={`descripcion-${f.codigo}`}
+                    activo={f.otorgada}
+                    disabled={cambio.isPending}
+                    onCambiar={(otorgar) => alternar(f, otorgar)}
+                  />
+                )}
               </li>
             ))}
           </ul>
@@ -139,33 +142,6 @@ export default function PrivacidadPagina() {
         </div>
       </Panel>
 
-      <Modal
-        abierto={confirmar !== null}
-        onCerrar={() => setConfirmar(null)}
-        titulo="¿Revocar una autorización necesaria?"
-        descripcion={
-          confirmar ? (
-            <>
-              Sin <span className="font-semibold text-tinta">{confirmar.nombre.toLowerCase()}</span> no podemos seguir prestándote el
-              servicio: tu relación con FinanTech y tus productos terminan. La revocación surte efecto en máximo 24 horas.
-            </>
-          ) : null
-        }
-        acciones={
-          <>
-            <Button variante="secundario" onClick={() => setConfirmar(null)}>
-              Mantener autorización
-            </Button>
-            <Button
-              variante="peligro"
-              cargando={cambio.isPending}
-              onClick={() => confirmar && cambio.mutate({ finalidad: confirmar, otorgar: false })}
-            >
-              Revocar y terminar la relación
-            </Button>
-          </>
-        }
-      />
     </div>
   )
 }

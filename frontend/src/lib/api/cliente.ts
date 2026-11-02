@@ -40,6 +40,23 @@ const MENSAJES: Record<string, string> = {
   demasiados_intentos: 'Hiciste muchos intentos seguidos. Espera un minuto y vuelve a intentarlo.',
   error_servidor: 'Algo falló de nuestro lado. Inténtalo de nuevo en unos minutos.',
   validacion: 'Revisa los datos marcados.',
+  pagina_vencida: 'La página estuvo abierta mucho tiempo. Recárgala e inténtalo de nuevo.',
+  archivo_muy_pesado: 'Los archivos pesan demasiado para enviarlos juntos. Usa fotos más livianas e inténtalo de nuevo.',
+  no_disponible: 'El servicio no está disponible en este momento. Inténtalo de nuevo en unos minutos.',
+}
+
+/** Errores sin cuerpo de negocio: el portal pone su propio texto (RNF-09). */
+const CODIGO_POR_ESTADO: Record<number, string> = {
+  0: 'sin_conexion',
+  401: 'sin_sesion',
+  403: 'sin_permiso',
+  404: 'no_encontrado',
+  // Laravel responde 419 cuando venció el token CSRF de la página.
+  419: 'pagina_vencida',
+  // nginx corta el cuerpo antes de llegar a Laravel (client_max_body_size).
+  413: 'archivo_muy_pesado',
+  429: 'demasiados_intentos',
+  503: 'no_disponible',
 }
 
 function esObjeto(valor: unknown): valor is Record<string, unknown> {
@@ -61,26 +78,8 @@ export function interpretarError(estado: number, cuerpo: unknown): ErrorApi {
     return new ErrorApi(estado, 'validacion', primero ?? MENSAJES.validacion, undefined, campos)
   }
 
-  const codigo =
-    estado === 0
-      ? 'sin_conexion'
-      : estado === 401
-        ? 'sin_sesion'
-        : estado === 403
-          ? 'sin_permiso'
-          : estado === 404
-            ? 'no_encontrado'
-            : estado === 429
-              ? 'demasiados_intentos'
-              : 'error_servidor'
+  const codigo = CODIGO_POR_ESTADO[estado] ?? 'error_servidor'
   return new ErrorApi(estado, codigo, MENSAJES[codigo])
-}
-
-interface Opciones {
-  metodo?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
-  cuerpo?: unknown
-  formulario?: FormData
-  senal?: AbortSignal
 }
 
 async function leerCuerpo(respuesta: Response): Promise<unknown> {
@@ -94,12 +93,92 @@ async function leerCuerpo(respuesta: Response): Promise<unknown> {
 }
 
 /**
- * Llama a /api/v1. La sesión viaja en cookies httpOnly del mismo origen (RI-08):
- * el portal nunca guarda tokens.
+ * Rutas cuyo 401 no significa "sesión vencida" sino credenciales o códigos rechazados:
+ * ahí no se intenta renovar la sesión.
  */
+const SIN_RENOVACION = [/^\/identidad\/sesiones(\/|$)/, /^\/identidad\/sesion\/renovar$/, /^\/identidad\/recuperacion/, /^\/clientes\/registro/]
+
+export const RUTA_RENOVAR = '/identidad/sesion/renovar'
+
+/** Valor de una cookie legible. Solo se usa para el token CSRF, que no es un secreto de sesión. */
+function leerCookie(nombre: string): string | null {
+  if (typeof document === 'undefined') return null
+  const par = document.cookie.split('; ').find((c) => c.startsWith(`${nombre}=`))
+  return par ? decodeURIComponent(par.slice(nombre.length + 1)) : null
+}
+
+function cabecerasBase(metodo: string): Record<string, string> {
+  // Laravel reconoce la petición como AJAX y responde JSON (401 en vez de redirigir).
+  const cabeceras: Record<string, string> = { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+  if (metodo !== 'GET') {
+    // Protección CSRF de Sanctum (si el backend la usa): la cookie XSRF-TOKEN viaja de vuelta como cabecera.
+    const xsrf = leerCookie('XSRF-TOKEN')
+    if (xsrf) cabeceras['X-XSRF-TOKEN'] = xsrf
+  }
+  return cabeceras
+}
+
+let renovacionEnCurso: Promise<boolean> | null = null
+
+/**
+ * Pide al servidor que rote la cookie de renovación y emita un acceso nuevo (RF-03, tokens
+ * de 15 min y 7 días). Si varias peticiones reciben 401 a la vez, comparten una sola
+ * renovación: la rotación invalida la cookie anterior y un segundo intento cerraría la sesión.
+ */
+export function renovarSesion(): Promise<boolean> {
+  renovacionEnCurso ??= fetch(`${BASE}${RUTA_RENOVAR}`, {
+    method: 'POST',
+    headers: cabecerasBase('POST'),
+    credentials: 'same-origin',
+  })
+    .then((respuesta) => respuesta.ok)
+    .catch(() => false)
+    .finally(() => {
+      renovacionEnCurso = null
+    })
+  return renovacionEnCurso
+}
+
+/**
+ * fetch a /api/v1 con la sesión en cookies httpOnly del mismo origen (RI-08): el portal
+ * nunca ve ni guarda tokens. Ante un 401 renueva la sesión una vez y repite la petición;
+ * si tampoco se puede renovar, lanza `sin_sesion` y las rutas protegidas llevan al ingreso.
+ */
+async function pedir(ruta: string, init: RequestInit & { method: string }): Promise<Response> {
+  const enviar = () =>
+    fetch(`${BASE}${ruta}`, {
+      ...init,
+      headers: { ...cabecerasBase(init.method), ...(init.headers as Record<string, string> | undefined) },
+      credentials: 'same-origin',
+    })
+
+  let respuesta: Response
+  try {
+    respuesta = await enviar()
+    if (respuesta.status === 401 && !SIN_RENOVACION.some((patron) => patron.test(ruta))) {
+      if (!(await renovarSesion())) throw interpretarError(401, undefined)
+      respuesta = await enviar()
+      if (respuesta.status === 401) throw interpretarError(401, undefined)
+    }
+  } catch (error) {
+    if (error instanceof ErrorApi) throw error
+    if (error instanceof DOMException && error.name === 'AbortError') throw error
+    throw interpretarError(0, undefined)
+  }
+  return respuesta
+}
+
+interface Opciones {
+  metodo?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
+  cuerpo?: unknown
+  formulario?: FormData
+  senal?: AbortSignal
+}
+
+/** Llama a /api/v1 y devuelve el cuerpo, o lanza un ErrorApi listo para mostrar. */
 export async function solicitar<T>(ruta: string, opciones: Opciones = {}): Promise<T> {
   const { metodo = 'GET', cuerpo, formulario, senal } = opciones
-  const cabeceras: Record<string, string> = { Accept: 'application/json' }
+  const cabeceras: Record<string, string> = {}
   let body: BodyInit | undefined
   if (formulario) {
     body = formulario
@@ -108,20 +187,7 @@ export async function solicitar<T>(ruta: string, opciones: Opciones = {}): Promi
     body = JSON.stringify(cuerpo)
   }
 
-  let respuesta: Response
-  try {
-    respuesta = await fetch(`${BASE}${ruta}`, {
-      method: metodo,
-      headers: cabeceras,
-      body,
-      credentials: 'same-origin',
-      signal: senal,
-    })
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') throw error
-    throw interpretarError(0, undefined)
-  }
-
+  const respuesta = await pedir(ruta, { method: metodo, headers: cabeceras, body, signal: senal })
   const datos = await leerCuerpo(respuesta)
   if (!respuesta.ok) throw interpretarError(respuesta.status, datos)
   return datos as T
@@ -129,12 +195,7 @@ export async function solicitar<T>(ruta: string, opciones: Opciones = {}): Promi
 
 /** Descarga un archivo de la API (por ejemplo, la exportación de auditoría). */
 export async function descargar(ruta: string, nombreArchivo: string): Promise<void> {
-  let respuesta: Response
-  try {
-    respuesta = await fetch(`${BASE}${ruta}`, { credentials: 'same-origin' })
-  } catch {
-    throw interpretarError(0, undefined)
-  }
+  const respuesta = await pedir(ruta, { method: 'GET' })
   if (!respuesta.ok) throw interpretarError(respuesta.status, await leerCuerpo(respuesta))
   guardarArchivo(await respuesta.blob(), nombreArchivo)
 }

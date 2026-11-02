@@ -16,15 +16,16 @@ El backend tiene que estar arriba (`docker compose up -d` en la raíz): el regis
 El backend todavía no tiene la mayoría de endpoints. Mientras tanto, [Mock Service Worker](https://mswjs.io) los simula en el navegador con datos **sintéticos**:
 
 - Se activa con `VITE_API_SIMULADA=true` en `.env.development` (activo por defecto en `npm run dev`).
-- Lo que no está simulado pasa al backend real. Hoy eso es solo el registro.
+- Lo que no está simulado pasa al backend real. Desde el 01/11 son reales: registro (RF-01), sesión con segundo factor (RF-03), verificación de identidad (RF-02), consentimientos (RF-04), recuperación de contraseña, `sistema/estado` y simulación (RF-05). Siguen simulados originación, oferta y pagaré, consola interna y administración.
 - Cuando Laravel implemente un endpoint, se **borra su handler** en `src/mocks/handlers/` y la pantalla queda conectada sin tocar nada más.
 - El contrato que esperan las pantallas está en [`docs/contrato-api-v1-frontend.md`](../docs/contrato-api-v1-frontend.md) y los tipos en `src/lib/api/tipos.ts`.
+- **Modo mixto:** `src/mocks/handlers/puenteSesion.ts` deja pasar la sesión real y enlaza por correo a la persona conectada con la base simulada, para que las pantallas que siguen simuladas respondan a la misma persona. Se borra cuando no quede ninguna pantalla simulada.
 - Los datos viven en `localStorage` del navegador. La franja "Datos de demostración" de arriba tiene el botón para reiniciarlos.
 - `npm run build` no incluye nada de los mocks: sin la variable, el import dinámico de `src/mocks` desaparece del bundle.
 
 ### Cuentas de demostración
 
-Todas con la contraseña `Demo#2026!`. El código del segundo factor aparece en pantalla (solo en modo simulado).
+Todas con la contraseña `Demo#2026!` y sembradas en Laravel (`CuentasDemoSeeder`). El código del segundo factor (y los del registro) se escriben en `backend/storage/logs/laravel.log`. Los códigos de la firma del pagaré, que sigue simulada, aparecen en pantalla.
 
 | Rol | Correo |
 |---|---|
@@ -82,5 +83,6 @@ src/
 - **Datos sensibles**: solo los últimos 4 dígitos (`enmascarar`, RNF-06).
 - **Resultados de terceros simulados**: siempre llevan `DistintivoSimulado`, incluido el pagaré firmado (MR-003, MR-004).
 - **Autorización**: `RutaProtegida` solo ordena la navegación; la autorización real va en el servidor, y los mocks también la aplican.
-- **Accesibilidad**: WCAG 2.1 AA (RNF-19). Foco visible, salto al contenido, etiquetas y errores asociados a cada campo, áreas táctiles de 44 px, cifras leídas con su unidad y `prefers-reduced-motion`.
+- **Sesión** (RF-03, RI-08): cookies httpOnly del mismo origen; el portal nunca ve ni guarda tokens. Ante un 401, `src/lib/api/cliente.ts` pide **una** renovación (`POST identidad/sesion/renovar`, compartida entre peticiones simultáneas) y repite la petición una vez; si no se puede, lleva a `/ingresar?volver=…`. El `volver` solo acepta rutas internas. El detalle está en el contrato, sección "Sesión".
+- **Accesibilidad**: WCAG 2.1 AA (RNF-19). Foco visible, salto al contenido, título de pestaña por página, foco al título al cambiar de página, etiquetas y errores asociados a cada campo (también en casillas), áreas táctiles de 44 px, cifras leídas con su unidad, alternativa a la cámara al subir fotos (RI-06) y `prefers-reduced-motion`.
 - **Consola interna**: se cierra a los 15 minutos sin actividad, con un minuto de aviso (RN-16).

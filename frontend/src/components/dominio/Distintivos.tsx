@@ -52,13 +52,16 @@ export function DistintivoDemo() {
   // Franja arriba de todo, sin flotar: así nunca tapa contenido en el celular.
   return (
     <>
-      <div className="no-imprimir flex items-center justify-center gap-2 border-b border-advertencia-100 bg-advertencia-50 px-4 py-1 text-xs text-advertencia-800">
+      <aside
+        aria-label="Aviso de demostración"
+        className="no-imprimir flex items-center justify-center gap-2 border-b border-advertencia-100 bg-advertencia-50 px-4 py-1 text-xs text-advertencia-800"
+      >
         <Info aria-hidden="true" className="size-3.5 shrink-0" />
         <span>Datos de demostración: personas y créditos inventados.</span>
         <button type="button" onClick={() => setAbierto(true)} className="min-h-8 font-semibold underline underline-offset-2">
           Qué significa
         </button>
-      </div>
+      </aside>
       <Modal
         abierto={abierto}
         onCerrar={() => setAbierto(false)}
@@ -66,8 +69,10 @@ export function DistintivoDemo() {
         cierreFuera
         descripcion={
           <>
-            El registro de clientes usa el servidor real. El resto de pantallas usa una API simulada en tu navegador,
-            con personas y créditos inventados, mientras el equipo construye el backend. Nada de lo que hagas aquí
+            Lo que ya está construido en el servidor (registro, inicio de sesión, verificación de identidad,
+            privacidad y simulador) es real. El resto de pantallas usa
+            una API simulada en tu navegador, con personas y créditos inventados, mientras el equipo construye el
+            backend. Nada de lo que hagas aquí
             mueve dinero ni crea obligaciones reales.
           </>
         }

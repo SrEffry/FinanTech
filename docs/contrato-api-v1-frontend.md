@@ -26,21 +26,43 @@ Este documento es para quien implemente estos endpoints en Laravel. Es lo que el
 | `POST identidad/sesiones` | `{email, password}` | `DesafioMfa` | 401 `credenciales_invalidas`, 423 `cuenta_bloqueada`. **El mismo mensaje y el mismo tiempo de respuesta exista o no el correo** (RN-17, CP0009). El contador de intentos también corre para correos que no existen. |
 | `POST identidad/sesiones/{desafio}/verificar` | `{codigo}` | `{usuario: Usuario}` y la cookie de sesión | 422 `codigo_incorrecto` (`datos.intentos_restantes`), `codigo_vencido`, `intentos_agotados` |
 | `POST identidad/sesiones/{desafio}/reenviar` | — | `DesafioMfa` | 429 `reenvio_muy_pronto` |
-| `GET identidad/sesion` | — | `{usuario: Usuario \| null}` (200 también sin sesión) | — |
-| `DELETE identidad/sesion` | — | 204 | — |
+| `GET identidad/sesion` | — | `{usuario: Usuario \| null}` (200 también sin sesión) | 401 si el acceso venció pero llega la cookie de renovación (ver "Sesión") |
+| `POST identidad/sesion/renovar` | — | 200 `{usuario}` con cookies nuevas | 401 `sin_sesion` si la renovación no es válida (y borra las cookies) |
+| `DELETE identidad/sesion` | — | 204, también sin sesión. Cierra **todas** las sesiones del usuario (RF-03: el cierre se propaga a todos los canales) | — |
 | `POST identidad/recuperacion` | `{email}` | 202 `{mensaje}`, siempre el mismo (RN-17) | — |
-| `GET/POST clientes/verificacion-identidad` | POST multipart: `documento_frente`, `documento_reverso`, `rostro` y `escenario` (este último solo en modo simulado) | `VerificacionIdentidad` | 409 `identidad_ya_verificada`, 422 de validación |
-| `GET identidad/consentimientos` | — | `Consentimientos` | — |
-| `POST identidad/consentimientos` | `{finalidad, accion: 'otorga' \| 'revoca', canal}` | `Consentimientos`. **Cada cambio es un registro nuevo** (RN-22). | 422 `finalidad_invalida` |
+| `POST identidad/recuperacion/confirmar` (nuevo, falta la pantalla) | `{email, token, password, password_confirmation}` (vienen del enlace `/recuperar/nueva?token&email` del correo) | 200 `{mensaje}`. Cierra todas las sesiones y levanta el bloqueo por intentos | 422 `enlace_invalido` (vencido a los 60 min, ya usado o falso), 422 de validación de `password` |
+| `GET/POST clientes/verificacion-identidad` (rol cliente; **en Laravel desde el 01/11**) | POST multipart: `documento_frente`, `documento_reverso`, `rostro` (JPG o PNG de hasta 10 MB) y `escenario` (este último solo en modo simulado; con `real` se ignora) | `VerificacionIdentidad` | 409 `identidad_ya_verificada`, 422 de validación |
+| `GET identidad/consentimientos` (rol cliente; **en Laravel desde el 01/11**) | — | `Consentimientos` | — |
+| `POST identidad/consentimientos` (rol cliente; **en Laravel desde el 01/11**) | `{finalidad, accion: 'otorga' \| 'revoca', canal}` | `Consentimientos`. **Cada cambio es un registro nuevo** (RN-21); si ya estaba así, no se registra nada. | 422 `finalidad_invalida`; 422 `finalidad_necesaria` al revocar una necesaria (RN-18, nuevo) |
+| `GET identidad/politica-vigente` | — | `PoliticaVigente`, ahora con `texto` (política completa, D6/UX-04) | — |
 
-**Pendiente en el registro actual (RF-01):** hoy `POST clientes/registro/{id}/verificar` crea el cliente pero **no abre sesión**. El portal propone que la abra, porque el paso 4 del asistente (verificar la identidad) la necesita. La API simulada lo hace así.
+#### Sesión (propuesta de frontend-senior, 01/11/2026; **implementada en Laravel por backend-senior el 01/11**)
+
+Lo que el portal ya implementa en `frontend/src/lib/api/cliente.ts`, y cómo lo resuelve Laravel:
+
+- **Cookies:** `ft_acceso` (JWT HS256 firmado, 15 min, RI-08/RN-13) y `ft_renovacion` (aleatoria, 7 días, RN-14), las dos httpOnly, con las rutas y SameSite de abajo. `Secure` lo activa `SESSION_SECURE_COOKIE=true`.
+- **Rotación:** cada `renovar` entrega una `ft_renovacion` nueva. Si una ya rotada se vuelve a presentar **dentro de 30 s** (otra pestaña renovó primero), se responde 200 con solo un `ft_acceso` nuevo; después de 30 s se toma como robo y se cierra la sesión.
+- **CSRF:** no se usa `XSRF-TOKEN`. Una petición que no es GET solo se autentica si trae `X-Requested-With: XMLHttpRequest` (además de SameSite=Lax/Strict).
+- **Inactividad (RN-16):** el servidor cierra la sesión de un rol interno con más de 15 min sin actividad; su `renovar` responde 401.
+- **Sin código en la respuesta:** `DesafioMfa` no trae `codigo_demo`; el código va al correo (en desarrollo, a `backend/storage/logs/laravel.log`).
+- **Registro:** `POST clientes/registro/{id}/verificar` ya abre la sesión (pone las dos cookies) y además devuelve `usuario`.
+- **Cuentas demo:** `CuentasDemoSeeder` siembra las de `frontend/README.md` (contraseña `Demo#2026!`); Laura queda con identidad verificada.
+
+1. **Cookies httpOnly** (nombres a elección del backend; el portal no las lee): acceso con `SameSite=Lax`, `Path=/api`, 15 min; renovación con `SameSite=Strict`, `Path=/api/v1/identidad/sesion`, 7 días y **rotación en cada uso** (reusar una ya rotada revoca toda la familia). `Secure` en producción. Ningún token en el cuerpo de ninguna respuesta (RI-08).
+2. **CSRF:** el portal manda siempre `X-Requested-With: XMLHttpRequest`, que Laravel exige para autenticar lo que no es GET. (Si algún día se usa la cookie `XSRF-TOKEN` de Sanctum, el portal ya la devuelve como `X-XSRF-TOKEN`.) Un 419 se muestra como "la página estuvo abierta mucho tiempo".
+3. **401 en un endpoint protegido:** el portal hace **un solo** `POST identidad/sesion/renovar` (compartido si varias peticiones fallan a la vez) y, si responde 2xx, repite la petición original una vez. Si la renovación falla, borra la sesión de su caché y lleva a `/ingresar?volver=<ruta>`; tras el ingreso vuelve ahí (solo rutas internas).
+4. **No se intenta renovar** ante el 401 de `identidad/sesiones*`, `identidad/sesion/renovar`, `identidad/recuperacion` ni `clientes/registro*`: ahí el 401 es de credenciales o códigos.
+5. **Inactividad de la consola (RN-16):** el portal cierra la sesión de los internos a los 15 min sin actividad, y el servidor rechaza su renovación pasado ese tiempo (ver arriba).
+6. **Verificado contra Laravel el 01/11 (frontend-senior):** registro → sesión abierta → panel → salir → ruta protegida → ingreso con segundo factor → regreso a la ruta pedida → acceso vencido y renovación transparente → sin cookies, al ingreso con `volver`. Ninguna cookie es legible desde JavaScript y nada de la sesión queda en `localStorage`.
+
+**Registro (RF-01):** `POST clientes/registro/{id}/verificar` crea el cliente **y abre la sesión** (desde el 01/11), porque el paso 4 del asistente (verificar la identidad) la necesita.
 
 ### Simulación
 
 | Método y ruta | Cuerpo | Respuesta | Errores |
 |---|---|---|---|
 | `GET cliente/productos` (pública) | — | `Producto[]` | — |
-| `POST cliente/simulaciones` (pública) | `{producto, monto, plazo_meses}` | `Simulacion`. **La suma de `desglose` es igual a `costo_total`** (CP0011) y `tasa_ea` es menor o igual a `tasa_maxima_legal_ea` (RN-23). | 422 `producto_invalido`, `fuera_de_rango` (`datos.minimo` y `datos.maximo`) |
+| `POST cliente/simulaciones` (pública) | `{producto, monto, plazo_meses}` | `Simulacion`. **La suma de `desglose` es igual a `costo_total`** (CP0011) y `tasa_ea` es menor o igual a `tasa_maxima_legal_ea` (RN-23). `valor_a_recibir` = monto − estudio de crédito (UX-15). Los productos y tasas salen de los parámetros vigentes de Evaluacion (D2). | 422 `producto_invalido`, `fuera_de_rango` (`datos.minimo` y `datos.maximo`) |
 
 ### Originación (cliente)
 

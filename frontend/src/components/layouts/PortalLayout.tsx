@@ -3,6 +3,7 @@ import { Calculator, FileText, House, LogOut, ShieldCheck } from 'lucide-react'
 import { useCerrarSesion, useUsuario } from '../../features/acceso/sesion'
 import { Logo } from '../dominio/Marca'
 import { BarraNavegacion, SaltarAlContenido } from './Comunes'
+import { useFocoAlNavegar } from './useFocoAlNavegar'
 
 const SECCIONES = [
   { a: '/portal', etiqueta: 'Inicio', icono: House, fin: true },
@@ -17,6 +18,7 @@ const SECCIONES = [
  */
 export function PortalLayout() {
   const usuario = useUsuario()
+  useFocoAlNavegar()
   const cerrar = useCerrarSesion()
 
   return (

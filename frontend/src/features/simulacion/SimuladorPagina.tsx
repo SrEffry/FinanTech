@@ -84,7 +84,7 @@ export default function SimuladorPagina() {
 
       {productos.isError ? <Alert tono="error">{mensajeDe(productos.error)}</Alert> : null}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
         <Panel titulo="Tu crédito" className="lg:sticky lg:top-24">
           {producto && valores ? (
             <div className="flex flex-col gap-6">
@@ -152,7 +152,7 @@ export default function SimuladorPagina() {
           )}
         </Panel>
 
-        <div className="flex flex-col gap-6" aria-busy={actualizando}>
+        <div className="flex min-w-0 flex-col gap-6" aria-busy={actualizando}>
           <Panel variante="destacado">
             {resultado ? (
               <div className={`flex flex-col gap-5 transition-opacity ${actualizando ? 'opacity-60' : ''}`}>
@@ -167,6 +167,8 @@ export default function SimuladorPagina() {
                   Tasa mensual equivalente {formatoPorcentaje(resultado.tasa_mensual, 4)}. No supera la tasa máxima legal de{' '}
                   {formatoPorcentaje(resultado.tasa_maxima_legal_ea)} E.A.
                 </p>
+                {/* RN-25, RN-27, CP0011: el aviso va antes del botón para seguir. */}
+                <AvisoNoAprobacion />
                 <Button onClick={continuar} className="w-full sm:w-auto sm:self-start">
                   Continuar con la solicitud
                 </Button>
@@ -185,8 +187,6 @@ export default function SimuladorPagina() {
             )}
           </Panel>
 
-          <AvisoNoAprobacion />
-
           {resultado ? (
             <>
               <Panel titulo="Qué pagas en total" descripcion="Todos los costos, sin letra pequeña.">
@@ -195,6 +195,7 @@ export default function SimuladorPagina() {
                   desglose={resultado.desglose}
                   costoTotal={resultado.costo_total}
                   totalAPagar={resultado.total_a_pagar}
+                  valorARecibir={resultado.valor_a_recibir}
                 />
               </Panel>
               <Panel titulo="Plan de pagos" descripcion="Así se reparte cada cuota entre capital, intereses y seguro.">

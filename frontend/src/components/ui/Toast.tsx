@@ -1,7 +1,7 @@
-import { createContext, use, useCallback, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { CircleAlert, CircleCheck, X } from 'lucide-react'
+import { Contexto, type TipoToast } from './toastContexto'
 
-type TipoToast = 'exito' | 'error'
 
 interface Toast {
   id: number
@@ -9,11 +9,6 @@ interface Toast {
   mensaje: string
 }
 
-interface ContextoToast {
-  avisar: (mensaje: string, tipo?: TipoToast) => void
-}
-
-const Contexto = createContext<ContextoToast>({ avisar: () => {} })
 
 let siguiente = 0
 
@@ -68,8 +63,4 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       </div>
     </Contexto>
   )
-}
-
-export function useToast() {
-  return use(Contexto)
 }

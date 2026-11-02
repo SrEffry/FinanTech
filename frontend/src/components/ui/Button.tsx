@@ -26,7 +26,7 @@ const TAMANOS: Record<Tamano, string> = {
   sm: 'min-h-11 px-3 text-sm sm:min-h-9',
 }
 
-export function clasesBoton(variante: Variante = 'primario', tamano: Tamano = 'md', extra = ''): string {
+function clasesBoton(variante: Variante = 'primario', tamano: Tamano = 'md', extra = ''): string {
   return `${BASE} ${VARIANTES[variante]} ${TAMANOS[tamano]} ${extra}`
 }
 

@@ -6,6 +6,7 @@ import { mensajeDe } from '../../lib/errores'
 import { Button } from '../../components/ui/Button'
 import { Field, Select } from '../../components/ui/Field'
 import { FileDrop } from '../../components/ui/FileDrop'
+import { TIPOS_FOTO } from '../../lib/archivos'
 import { Alert } from '../../components/ui/Feedback'
 import { DistintivoSimulado } from '../../components/dominio/Distintivos'
 import { CLAVE_SESION, useServiciosSimulados } from '../acceso/sesion'
@@ -111,9 +112,9 @@ export function VerificacionIdentidad({ onTerminar }: Props) {
       {envio.isError ? <Alert tono="error">{mensajeDe(envio.error)}</Alert> : null}
 
       <section aria-labelledby="titulo-documento" className="flex flex-col gap-3">
-        <h3 id="titulo-documento" className="font-semibold">
+        <h2 id="titulo-documento" className="font-semibold">
           Tu documento de identidad
-        </h3>
+        </h2>
         <p className="text-sm text-tinta-suave">
           Ponlo sobre una superficie oscura, con buena luz y sin reflejos. Que se vean las cuatro esquinas.
         </p>
@@ -136,16 +137,17 @@ export function VerificacionIdentidad({ onTerminar }: Props) {
       </section>
 
       <section aria-labelledby="titulo-rostro" className="flex flex-col gap-3">
-        <h3 id="titulo-rostro" className="font-semibold">
+        <h2 id="titulo-rostro" className="font-semibold">
           Prueba de vida
-        </h3>
+        </h2>
         <p className="text-sm text-tinta-suave">
           Tómate una foto de frente, sin gafas ni gorra, en un lugar iluminado. La comparamos con la foto de tu documento.
         </p>
         <FileDrop
           etiqueta="Foto de tu rostro"
-          descripcion="Toca para abrir la cámara frontal o elige una foto (JPG o PNG)."
+          descripcion="Toca para abrir la cámara frontal (JPG o PNG de hasta 10 MB)."
           captura="user"
+          tipos={TIPOS_FOTO}
           onSeleccionar={setRostro}
           archivoActual={rostro ? { nombre: rostro.name, tamano: rostro.size } : null}
           error={faltantes.rostro}

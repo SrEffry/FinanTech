@@ -16,7 +16,7 @@ import { Alert, Badge } from '../../components/ui/Feedback'
 import { Modal } from '../../components/ui/Modal'
 import { MoneyInput } from '../../components/ui/MoneyInput'
 import { Skeleton } from '../../components/ui/Spinner'
-import { useToast } from '../../components/ui/Toast'
+import { useToast } from '../../components/ui/toastContexto'
 import { EncabezadoPagina } from '../../components/layouts/Comunes'
 import { useUsuario } from '../acceso/sesion'
 

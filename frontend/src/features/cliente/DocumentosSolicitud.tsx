@@ -6,7 +6,7 @@ import type { DocumentoSolicitud } from '../../lib/api/tipos'
 import { mensajeDe } from '../../lib/errores'
 import { FileDrop } from '../../components/ui/FileDrop'
 import { Badge } from '../../components/ui/Feedback'
-import { useToast } from '../../components/ui/Toast'
+import { useToast } from '../../components/ui/toastContexto'
 
 const ESTADO = {
   pendiente: { texto: 'Pendiente', tono: 'neutro' as const, icono: <Clock aria-hidden="true" className="size-3.5" /> },

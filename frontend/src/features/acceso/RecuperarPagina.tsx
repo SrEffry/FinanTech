@@ -27,6 +27,7 @@ export default function RecuperarPagina() {
     <PantallaAcceso>
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-2">
+          <title>Recupera tu contraseña · FinanTech</title>
           <h1 className="text-2xl font-semibold tracking-tight">Recupera tu contraseña</h1>
           <p className="text-tinta-suave">Escribe el correo de tu cuenta y te enviaremos un enlace para crear una nueva.</p>
         </div>

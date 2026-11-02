@@ -67,7 +67,10 @@ export function EncabezadoPagina({ titulo, descripcion, migas, acciones, extra }
       ) : null}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex max-w-3xl flex-col gap-1.5">
-          <h1 className="text-2xl font-semibold tracking-tight text-tinta">{titulo}</h1>
+          <title>{`${titulo} · FinanTech`}</title>
+          <h1 tabIndex={-1} className="text-2xl font-semibold tracking-tight text-tinta outline-none">
+            {titulo}
+          </h1>
           {descripcion ? <div className="text-base text-tinta-suave">{descripcion}</div> : null}
         </div>
         {acciones ? <div className="flex flex-wrap gap-2">{acciones}</div> : null}

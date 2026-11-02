@@ -4,9 +4,11 @@ import { BadgeCheck, LineChart, Lock } from 'lucide-react'
 import { ButtonLink } from '../ui/Button'
 import { Logo } from '../dominio/Marca'
 import { BarraNavegacion, SaltarAlContenido } from './Comunes'
+import { useFocoAlNavegar } from './useFocoAlNavegar'
 
 /** Páginas públicas (simulador del visitante, recuperación de contraseña). */
 export function PublicoLayout() {
+  useFocoAlNavegar()
   return (
     <div className="min-h-dvh bg-fondo">
       <SaltarAlContenido />

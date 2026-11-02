@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useMutation } from '@tanstack/react-query'
-import { Link, Navigate, useNavigate, useSearchParams } from 'react-router'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { iniciarSesion } from '../../lib/api/identidad'
 import { codigoDe, mensajeDe } from '../../lib/errores'
 import { Button } from '../../components/ui/Button'
@@ -12,7 +12,7 @@ import { Alert } from '../../components/ui/Feedback'
 import { CargaPagina } from '../../components/ui/Spinner'
 import { PantallaAcceso } from '../../components/layouts/PublicoLayout'
 import { API_SIMULADA } from '../../components/dominio/Distintivos'
-import { inicioDeRol, useSesion } from './sesion'
+import { inicioDeRol, olvidarSesion, rutaSegura, useSesion } from './sesion'
 
 const esquema = z.object({
   email: z.string().trim().min(1, 'Escribe tu correo.').email('Escribe un correo válido, como nombre@correo.com.'),
@@ -36,7 +36,12 @@ export default function IngresarPagina() {
   const { data: usuario, isPending: cargandoSesion } = useSesion()
   const [parametros] = useSearchParams()
   const navegar = useNavigate()
-  const volver = parametros.get('volver')
+  const volver = rutaSegura(parametros.get('volver'))
+  const salio = (useLocation().state as { salio?: boolean } | null)?.salio === true
+  const clienteConsultas = useQueryClient()
+  useEffect(() => {
+    if (salio) olvidarSesion(clienteConsultas)
+  }, [salio, clienteConsultas])
   const [mostrarContrasena, setMostrarContrasena] = useState(false)
 
   const {
@@ -53,8 +58,8 @@ export default function IngresarPagina() {
     },
   })
 
-  if (cargandoSesion) return <CargaPagina />
-  if (usuario) return <Navigate to={volver ?? inicioDeRol(usuario.rol)} replace />
+  if (cargandoSesion && !salio) return <CargaPagina />
+  if (usuario && !salio) return <Navigate to={volver ?? inicioDeRol(usuario.rol)} replace />
 
   const bloqueada = codigoDe(ingreso.error) === 'cuenta_bloqueada'
 
@@ -65,6 +70,11 @@ export default function IngresarPagina() {
           <h1 className="text-2xl font-semibold tracking-tight">Inicia sesión</h1>
           <p className="text-tinta-suave">Clientes y equipo de FinanTech entran por aquí.</p>
         </div>
+        <title>Inicia sesión · FinanTech</title>
+
+        {volver && !ingreso.isError ? (
+          <Alert tono="info">Inicia sesión para continuar. Al terminar te llevamos de vuelta a donde estabas.</Alert>
+        ) : null}
 
         {ingreso.isError ? (
           <Alert
@@ -96,10 +106,11 @@ export default function IngresarPagina() {
               <button
                 type="button"
                 onClick={() => setMostrarContrasena((v) => !v)}
-                aria-pressed={mostrarContrasena}
                 className="absolute inset-y-0 right-0 min-w-20 rounded-r-campo px-3 text-sm font-semibold text-primario-700"
               >
+                {/* El texto ya dice el estado: sin aria-pressed para que no se lea "Ocultar, presionado". */}
                 {mostrarContrasena ? 'Ocultar' : 'Mostrar'}
+                <span className="sr-only"> contraseña</span>
               </button>
             </div>
           </Field>
@@ -132,8 +143,8 @@ export default function IngresarPagina() {
           <details className="rounded-panel border border-advertencia-100 bg-advertencia-50 px-4 py-3 text-sm text-advertencia-800">
             <summary className="cursor-pointer font-semibold">Cuentas de demostración</summary>
             <p className="mt-2">
-              Contraseña de todas: <code className="font-semibold">{CONTRASENA_DEMO}</code>. El código del segundo factor
-              aparece en pantalla.
+              Contraseña de todas: <code className="font-semibold">{CONTRASENA_DEMO}</code>. En desarrollo el código del
+              segundo factor no llega a un correo: queda en <code>backend/storage/logs/laravel.log</code>.
             </p>
             <ul className="mt-2 flex flex-col">
               {CUENTAS_DEMO.map((c) => (

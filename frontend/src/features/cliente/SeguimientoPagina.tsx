@@ -8,13 +8,13 @@ import { formatoFechaHora } from '../../lib/formato'
 import { Button, ButtonLink } from '../../components/ui/Button'
 import { Alert, Panel } from '../../components/ui/Feedback'
 import { CargaPagina } from '../../components/ui/Spinner'
-import { useToast } from '../../components/ui/Toast'
+import { useToast } from '../../components/ui/toastContexto'
 import { CuotaConTea } from '../../components/dominio/CuotaConTea'
 import { EstadoBadge, LineaEtapas } from '../../components/dominio/Estado'
 import { Dinero } from '../../components/dominio/Marca'
 import { EncabezadoPagina } from '../../components/layouts/Comunes'
 import { DocumentosSolicitud } from './DocumentosSolicitud'
-import { rutaAccion } from './PanelClientePagina'
+import { rutaAccion } from './rutaAccion'
 
 /**
  * Seguimiento de la solicitud (8.2.4, RF-07). Mientras el motor evalúa se consulta cada
