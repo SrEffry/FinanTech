@@ -76,5 +76,8 @@ return [
         'canal' => 'el canal',
         'codigo_email' => 'el código del correo',
         'codigo_telefono' => 'el código del celular',
+        'producto' => 'el producto',
+        'monto' => 'el monto',
+        'plazo_meses' => 'el plazo',
     ],
 ];
