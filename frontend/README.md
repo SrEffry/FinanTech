@@ -25,7 +25,7 @@ El backend todavía no tiene la mayoría de endpoints. Mientras tanto, [Mock Ser
 
 ### Cuentas de demostración
 
-Todas con la contraseña `Demo#2026!` y sembradas en Laravel (`CuentasDemoSeeder`). El código del segundo factor (y los del registro) se escriben en `backend/storage/logs/laravel.log`. Los códigos de la firma del pagaré, que sigue simulada, aparecen en pantalla.
+Todas con la contraseña `Demo#2026!` y sembradas en Laravel (`CuentasDemoSeeder`). El código del segundo factor y el del correo del registro llegan a Mailpit (http://localhost:8025). Los códigos de la firma del pagaré, que sigue simulada, aparecen en pantalla.
 
 | Rol | Correo |
 |---|---|
@@ -47,7 +47,7 @@ Todas con la contraseña `Demo#2026!` y sembradas en Laravel (`CuentasDemoSeeder
 - **Cliente nuevo:** al registrarte de verdad, en el paso de identidad puedes forzar el escenario del proveedor simulado (éxito, coincidencia baja, documento ilegible, servicio caído o lista restrictiva).
 - **Central de riesgo:** la simulada no responde para documentos que terminan en 0. La solicitud pasa a estudio sin negarse (RF-08 FA-02).
 
-Los códigos del registro real (correo y SMS) se escriben en `backend/storage/logs/laravel.log`.
+El código del correo del registro llega a Mailpit (http://localhost:8025); el del SMS simulado se escribe en `backend/storage/logs/laravel.log`.
 
 ## Comandos
 

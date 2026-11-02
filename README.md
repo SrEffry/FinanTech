@@ -61,7 +61,7 @@ npm run dev
 | Portal | http://localhost:5173 |
 | MySQL | `localhost:3307`, base `finantech`, usuario `finantech`, contraseña `finantech_dev` |
 
-En desarrollo los correos y SMS no se envían de verdad: los códigos de verificación aparecen en `backend/storage/logs/laravel.log`.
+En desarrollo nada sale a internet. Los correos (códigos de verificación y de segundo factor) llegan a la bandeja de **Mailpit** en http://localhost:8025. El SMS es simulado y se escribe en `backend/storage/logs/laravel.log`. Si después de reconstruir los contenedores la API responde 502, ejecuta `docker compose restart web`.
 
 Si `npm install` avisa que bloqueó el script de `esbuild`, ejecuta `npm approve-scripts esbuild` y luego `npm rebuild`.
 

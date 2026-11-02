@@ -109,7 +109,7 @@ docker compose exec app composer require <paquete>
 cd frontend && npm run dev                            # portal en http://localhost:5173
 ```
 
-- Los códigos de verificación (correo y SMS) se escriben en `backend/storage/logs/laravel.log`, porque `MAIL_MAILER=log` y el SMS es simulado.
+- Los correos (códigos de verificación y de segundo factor) llegan a Mailpit en http://localhost:8025. El SMS es simulado y se escribe en `backend/storage/logs/laravel.log`.
 - Al crear clases nuevas, si no se cargan, correr `docker compose exec app composer dump-autoload`.
 
 Cobertura mínima: 75 % global y 95 % en el motor de reglas y la lógica contable (RNF-12).

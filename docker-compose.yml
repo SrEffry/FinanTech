@@ -40,5 +40,12 @@ services:
       timeout: 5s
       retries: 20
 
+  # Bandeja de correo de desarrollo: recibe todo lo que envía la aplicación (códigos de
+  # verificación y de segundo factor) y lo muestra en http://localhost:8025. Nada sale a internet.
+  mailpit:
+    image: axllent/mailpit:v1.21.0
+    ports:
+      - "8025:8025"
+
 volumes:
   mysql-data:
