@@ -1,22 +1,23 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router'
 import { Save } from 'lucide-react'
-import { obtenerProductos } from '../../lib/api/simulacion'
+import { obtenerProductos, simular } from '../../lib/api/simulacion'
 import { crearSolicitud, guardarBorrador, obtenerSolicitud, radicar } from '../../lib/api/solicitudes'
 import type { CambiosBorrador, Producto, SolicitudDetalle } from '../../lib/api/tipos'
 import { ErrorApi } from '../../lib/api/cliente'
 import { codigoDe, mensajeDe } from '../../lib/errores'
+import { useEstable } from '../../lib/useEstable'
 import { enmascarar, formatoFecha, formatoMoneda, formatoPorcentaje } from '../../lib/formato'
 import { Button, ButtonLink } from '../../components/ui/Button'
 import { Checkbox } from '../../components/ui/Choice'
 import { DatoBloqueado, Field, Input, Select } from '../../components/ui/Field'
 import { Alert, Panel } from '../../components/ui/Feedback'
 import { MoneyInput } from '../../components/ui/MoneyInput'
-import { CargaPagina } from '../../components/ui/Spinner'
+import { CargaPagina, Skeleton } from '../../components/ui/Spinner'
 import { Stepper } from '../../components/ui/Stepper'
 import { useToast } from '../../components/ui/toastContexto'
 import { CuotaConTea } from '../../components/dominio/CuotaConTea'
@@ -200,16 +201,21 @@ const CAMPO_SERVIDOR: Record<string, keyof Datos> = {
   'referencia.celular': 'referencia_celular',
 }
 
+/** Un campo numérico vacío vale NaN en el formulario: no se envía como número. */
+function finito(valor: number | undefined): number | null {
+  return valor !== undefined && Number.isFinite(valor) ? valor : null
+}
+
 function cambiosDe(d: Partial<Datos>): CambiosBorrador {
   return {
-    monto: d.monto,
-    plazo_meses: d.plazo_meses,
+    monto: finito(d.monto) ?? undefined,
+    plazo_meses: finito(d.plazo_meses) ?? undefined,
     laboral: {
       ocupacion: d.ocupacion ?? '',
       empleador: d.empleador ?? '',
-      antiguedad_laboral_meses: Number.isFinite(d.antiguedad_laboral_meses) ? (d.antiguedad_laboral_meses as number) : null,
+      antiguedad_laboral_meses: finito(d.antiguedad_laboral_meses),
     },
-    financiero: { ingreso_mensual: d.ingreso_mensual ?? null, egreso_mensual: d.egreso_mensual ?? null },
+    financiero: { ingreso_mensual: finito(d.ingreso_mensual), egreso_mensual: finito(d.egreso_mensual) },
     referencia: { nombre: d.referencia_nombre ?? '', celular: d.referencia_celular ?? '' },
     acepta_consulta_centrales: d.acepta_consulta_centrales,
   }
@@ -218,6 +224,11 @@ function cambiosDe(d: Partial<Datos>): CambiosBorrador {
 function EditorBorrador({ solicitud, producto }: { solicitud: SolicitudDetalle; producto: Producto }) {
   const [seccion, setSeccion] = useState(0)
   const [faltaAutorizacion, setFaltaAutorizacion] = useState(false)
+  // UX-06: si la cuota supera la capacidad de pago, se frena en la sección hasta que la persona decida.
+  const [avisoCapacidad, setAvisoCapacidad] = useState(false)
+  const [capacidadAceptada, setCapacidadAceptada] = useState(false)
+  const refAviso = useRef<HTMLDivElement>(null)
+  const refTitulo = useRef<HTMLHeadingElement>(null)
   const cliente = useQueryClient()
   const navegar = useNavigate()
   const { avisar } = useToast()
@@ -280,21 +291,42 @@ function EditorBorrador({ solicitud, producto }: { solicitud: SolicitudDetalle; 
     },
   })
 
+  /** Cambia de sección y lleva el foco a su título, que el lector anuncia (UX-12, WCAG 2.4.3). */
+  function irA(indice: number) {
+    setSeccion(Math.max(0, Math.min(SECCIONES.length - 1, indice)))
+    setAvisoCapacidad(false)
+    window.requestAnimationFrame(() => refTitulo.current?.focus())
+  }
+
   async function continuar() {
     const valido = await trigger(CAMPOS_POR_SECCION[seccion])
     if (!valido) return
-    if (CAMPOS_POR_SECCION[seccion].length > 0) await guardado.mutateAsync().catch(() => undefined)
-    setSeccion((s) => Math.min(SECCIONES.length - 1, s + 1))
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    const actualizada = CAMPOS_POR_SECCION[seccion].length > 0 ? await guardado.mutateAsync().catch(() => undefined) : undefined
+    // RF-06 FA-04: la capacidad se conoce al guardar los ingresos. Si supera el límite, la
+    // persona lo ve aquí, antes de seguir, y elige si ajusta o continúa.
+    if (seccion === 2 && actualizada?.capacidad_pago?.supera_limite && !capacidadAceptada) {
+      setAvisoCapacidad(true)
+      window.requestAnimationFrame(() => refAviso.current?.focus())
+      return
+    }
+    irA(seccion + 1)
+  }
+
+  function guardarBorradorAhora() {
+    guardado.mutate(undefined, {
+      onSuccess: () => avisar('Borrador guardado. Lo conservamos 30 días.'),
+      onError: (error) => avisar(mensajeDe(error), 'error'),
+    })
   }
 
   const monto = watch('monto')
   const plazo = watch('plazo_meses')
   const capacidad = solicitud.capacidad_pago
   const conocidos = solicitud.datos_conocidos
+  const guardada = { monto: solicitud.monto, plazo: solicitud.plazo_meses, cuota: solicitud.cuota_estimada, tea: solicitud.tasa_ea }
 
   return (
-    <div className="mx-auto max-w-3xl pb-20">
+    <div className="mx-auto max-w-3xl">
       <EncabezadoPagina
         titulo={`Solicitud de ${producto.nombre.toLowerCase()}`}
         descripcion={solicitud.borrador_vence_en ? `Guardamos tu borrador hasta el ${formatoFecha(solicitud.borrador_vence_en)}.` : undefined}
@@ -302,16 +334,17 @@ function EditorBorrador({ solicitud, producto }: { solicitud: SolicitudDetalle; 
       />
       <div className="mb-6">
         <Stepper pasos={SECCIONES} actual={seccion} etiqueta="Progreso de la solicitud" />
-        {/* La sección cambia sin cambiar la URL: se anuncia para el lector de pantalla (WCAG 4.1.3). */}
-        <p className="sr-only" aria-live="polite">
-          Paso {seccion + 1} de {SECCIONES.length}: {SECCIONES[seccion]}
-        </p>
       </div>
 
       <Panel>
         <form noValidate onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-6">
+          {/* La sección cambia sin cambiar la URL: su título recibe el foco y se anuncia (UX-12). */}
+          <h2 ref={refTitulo} tabIndex={-1} className="text-xl font-semibold text-tinta outline-none">
+            <span className="sr-only">{`Paso ${seccion + 1} de ${SECCIONES.length}: `}</span>
+            {SECCIONES[seccion]}
+          </h2>
           {seccion === 0 ? (
-            <section aria-label="Crédito" className="flex flex-col gap-5">
+            <section className="flex flex-col gap-5">
               <div className="grid gap-5 sm:grid-cols-2">
                 <Field
                   id="monto"
@@ -323,26 +356,19 @@ function EditorBorrador({ solicitud, producto }: { solicitud: SolicitudDetalle; 
                     control={control}
                     name="monto"
                     rules={{ min: producto.monto_min, max: producto.monto_max }}
-                    render={({ field }) => <MoneyInput valor={field.value} onCambiar={(v) => field.onChange(v ?? undefined)} onBlur={field.onBlur} name={field.name} />}
+                    render={({ field }) => <MoneyInput valor={Number.isFinite(field.value) ? field.value : null} onCambiar={(v) => field.onChange(v ?? Number.NaN)} onBlur={field.onBlur} name={field.name} />}
                   />
                 </Field>
                 <Field id="plazo_meses" etiqueta="Plazo en meses" ayuda={`Entre ${producto.plazo_min} y ${producto.plazo_max} meses.`} error={errors.plazo_meses?.message}>
                   <Input inputMode="numeric" className="cifras" {...register('plazo_meses', { valueAsNumber: true })} />
                 </Field>
               </div>
-              {monto < producto.monto_min || monto > producto.monto_max || plazo < producto.plazo_min || plazo > producto.plazo_max ? (
-                <Alert tono="advertencia">El monto o el plazo están fuera del rango de {producto.nombre.toLowerCase()}.</Alert>
-              ) : (
-                <div className="rounded-campo bg-fondo p-4">
-                  <CuotaConTea cuota={solicitud.cuota_estimada} tea={solicitud.tasa_ea} tamano="mediano" etiquetaCuota="Cuota estimada" />
-                  <p className="mt-3 text-xs text-tinta-tenue">La cuota se recalcula al guardar. No es una aprobación.</p>
-                </div>
-              )}
+              <CuotaDelBorrador producto={producto} monto={monto} plazo={plazo} guardada={guardada} />
             </section>
           ) : null}
 
           {seccion === 1 ? (
-            <section aria-label="Tus datos" className="flex flex-col gap-4">
+            <section className="flex flex-col gap-4">
               <p className="text-sm text-tinta-suave">Estos datos ya los tenemos de tu registro: no te los volvemos a pedir.</p>
               <dl className="grid gap-3 sm:grid-cols-2">
                 <DatoBloqueado etiqueta="Nombre" valor={conocidos.nombre_completo} />
@@ -358,7 +384,7 @@ function EditorBorrador({ solicitud, producto }: { solicitud: SolicitudDetalle; 
           ) : null}
 
           {seccion === 2 ? (
-            <section aria-label="Trabajo e ingresos" className="flex flex-col gap-5">
+            <section className="flex flex-col gap-5">
               <div className="grid gap-5 sm:grid-cols-2">
                 <Field id="ocupacion" etiqueta="Ocupación" error={errors.ocupacion?.message}>
                   <Select {...register('ocupacion')}>
@@ -384,7 +410,7 @@ function EditorBorrador({ solicitud, producto }: { solicitud: SolicitudDetalle; 
                   <Controller
                     control={control}
                     name="ingreso_mensual"
-                    render={({ field }) => <MoneyInput valor={field.value} onCambiar={(v) => field.onChange(v ?? undefined)} onBlur={field.onBlur} name={field.name} />}
+                    render={({ field }) => <MoneyInput valor={Number.isFinite(field.value) ? field.value : null} onCambiar={(v) => field.onChange(v ?? Number.NaN)} onBlur={field.onBlur} name={field.name} />}
                   />
                 </Field>
                 <Field
@@ -396,32 +422,35 @@ function EditorBorrador({ solicitud, producto }: { solicitud: SolicitudDetalle; 
                   <Controller
                     control={control}
                     name="egreso_mensual"
-                    render={({ field }) => <MoneyInput valor={field.value} onCambiar={(v) => field.onChange(v ?? undefined)} onBlur={field.onBlur} name={field.name} />}
+                    render={({ field }) => <MoneyInput valor={Number.isFinite(field.value) ? field.value : null} onCambiar={(v) => field.onChange(v ?? Number.NaN)} onBlur={field.onBlur} name={field.name} />}
                   />
                 </Field>
               </div>
-              {capacidad?.supera_limite ? (
-                // RF-06 FA-04: capacidad insuficiente, se advierte y se ofrece ajustar.
-                <Alert
-                  tono="advertencia"
-                  titulo="La cuota ocuparía una parte muy alta de tus ingresos"
-                  accion={
-                    <Button variante="secundario" tamano="sm" onClick={() => setSeccion(0)}>
+              {avisoCapacidad && capacidad?.supera_limite ? (
+                // RF-06 FA-04: capacidad insuficiente; se advierte antes de seguir y se ofrece ajustar.
+                <div ref={refAviso} tabIndex={-1} className="flex flex-col gap-3 rounded-campo outline-none">
+                  <AvisoCapacidad capacidad={capacidad} tea={solicitud.tasa_ea} />
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Button variante="secundario" onClick={() => irA(0)}>
                       Ajustar monto o plazo
                     </Button>
-                  }
-                >
-                  La cuota estimada de <Dinero valor={capacidad.cuota_estimada} className="font-semibold" /> (TEA{' '}
-                  <Porcentaje valor={solicitud.tasa_ea} className="font-semibold" />) es el {capacidad.porcentaje.toLocaleString('es-CO')} % de lo que te
-                  queda disponible (<Dinero valor={capacidad.ingreso_disponible} />). El máximo que aprobamos es el {capacidad.limite} %. Puedes radicar igual,
-                  pero es probable que no sea aprobada así.
-                </Alert>
+                    <Button
+                      variante="fantasma"
+                      onClick={() => {
+                        setCapacidadAceptada(true)
+                        irA(3)
+                      }}
+                    >
+                      Continuar de todas formas
+                    </Button>
+                  </div>
+                </div>
               ) : null}
             </section>
           ) : null}
 
           {seccion === 3 ? (
-            <section aria-label="Referencia" className="flex flex-col gap-5">
+            <section className="flex flex-col gap-5">
               <p className="text-sm text-tinta-suave">Una persona que te conozca y a quien podamos llamar. No la contactamos para cobrar.</p>
               <div className="grid gap-5 sm:grid-cols-2">
                 <Field id="referencia_nombre" etiqueta="Nombre completo" error={errors.referencia_nombre?.message}>
@@ -435,7 +464,7 @@ function EditorBorrador({ solicitud, producto }: { solicitud: SolicitudDetalle; 
           ) : null}
 
           {seccion === 4 ? (
-            <section aria-label="Documentos" className="flex flex-col gap-4">
+            <section className="flex flex-col gap-4">
               <p className="text-sm text-tinta-suave">
                 Según tu ocupación necesitamos estos documentos. JPG, PNG o PDF de hasta 10 MB. Tu documento de identidad ya lo verificamos.
               </p>
@@ -445,7 +474,7 @@ function EditorBorrador({ solicitud, producto }: { solicitud: SolicitudDetalle; 
           ) : null}
 
           {seccion === 5 ? (
-            <section aria-label="Revisión" className="flex flex-col gap-5">
+            <section className="flex flex-col gap-5">
               <dl className="divide-y divide-linea-suave">
                 {[
                   ['Producto', producto.nombre],
@@ -463,9 +492,8 @@ function EditorBorrador({ solicitud, producto }: { solicitud: SolicitudDetalle; 
                   </div>
                 ))}
               </dl>
-              <div className="rounded-campo bg-fondo p-4">
-                <CuotaConTea cuota={solicitud.cuota_estimada} tea={solicitud.tasa_ea} tamano="mediano" etiquetaCuota="Cuota estimada" />
-              </div>
+              <CuotaDelBorrador producto={producto} monto={getValues('monto')} plazo={getValues('plazo_meses')} guardada={guardada} />
+              {capacidad?.supera_limite ? <AvisoCapacidad capacidad={capacidad} tea={solicitud.tasa_ea} /> : null}
               <Controller
                 control={control}
                 name="acepta_consulta_centrales"
@@ -489,10 +517,18 @@ function EditorBorrador({ solicitud, producto }: { solicitud: SolicitudDetalle; 
 
           {guardado.isError ? <Alert tono="error">{mensajeDe(guardado.error)}</Alert> : null}
 
-          <div className="flex flex-col-reverse gap-2 border-t border-linea pt-5 sm:flex-row sm:justify-between">
-            <Button variante="secundario" onClick={() => setSeccion((s) => Math.max(0, s - 1))} disabled={seccion === 0}>
-              Volver
-            </Button>
+          <div className="flex flex-col-reverse gap-2 border-t border-linea pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col-reverse gap-2 sm:flex-row">
+              {seccion > 0 ? (
+                <Button variante="secundario" onClick={() => irA(seccion - 1)}>
+                  Volver
+                </Button>
+              ) : null}
+              {/* "Guardar borrador" siempre a mano (8.2.3), en la fila de acciones: no tapa campos (SV-09). */}
+              <Button variante="fantasma" icono={<Save aria-hidden="true" className="size-4" />} cargando={guardado.isPending} onClick={guardarBorradorAhora}>
+                Guardar borrador
+              </Button>
+            </div>
             {seccion < SECCIONES.length - 1 ? (
               <Button onClick={continuar} cargando={guardado.isPending}>
                 Continuar
@@ -516,24 +552,83 @@ function EditorBorrador({ solicitud, producto }: { solicitud: SolicitudDetalle; 
           </div>
         </form>
       </Panel>
-
-      {/* "Guardar borrador" siempre a mano (8.2.3). */}
-      <div className="no-imprimir fixed inset-x-0 bottom-16 z-20 flex justify-center px-4 md:bottom-6">
-        <Button
-          variante="secundario"
-          className="shadow-md shadow-tinta/10"
-          icono={<Save aria-hidden="true" className="size-4" />}
-          cargando={guardado.isPending}
-          onClick={() =>
-            guardado.mutate(undefined, {
-              onSuccess: () => avisar('Borrador guardado. Lo conservamos 30 días.'),
-              onError: (error) => avisar(mensajeDe(error), 'error'),
-            })
-          }
-        >
-          Guardar borrador
-        </Button>
-      </div>
     </div>
+  )
+}
+
+/**
+ * Cuota del borrador mientras se edita (UX-05, RNF-20): nunca muestra una cuota que no
+ * corresponde al monto y el plazo visibles. Si cambian, se recalcula con la simulación y,
+ * mientras tanto, se dice que se está calculando.
+ */
+function CuotaDelBorrador({
+  producto,
+  monto,
+  plazo,
+  guardada,
+}: {
+  producto: Producto
+  monto: number
+  plazo: number
+  guardada: { monto: number; plazo: number; cuota: number; tea: number }
+}) {
+  const enRango =
+    Number.isFinite(monto) &&
+    Number.isFinite(plazo) &&
+    monto >= producto.monto_min &&
+    monto <= producto.monto_max &&
+    plazo >= producto.plazo_min &&
+    plazo <= producto.plazo_max
+  const igualAGuardada = monto === guardada.monto && plazo === guardada.plazo
+  const clave = useEstable(enRango && !igualAGuardada ? `${monto}|${plazo}` : '')
+  const [montoConsulta, plazoConsulta] = clave.split('|').map(Number)
+  const simulacion = useQuery({
+    queryKey: ['simulacion', `${producto.codigo}|${clave}`],
+    queryFn: ({ signal }) => simular(producto.codigo, montoConsulta, plazoConsulta, signal),
+    enabled: clave !== '',
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+  })
+
+  if (!enRango) {
+    return <Alert tono="advertencia">El monto o el plazo están fuera del rango de {producto.nombre.toLowerCase()}.</Alert>
+  }
+  const coincide = simulacion.data && simulacion.data.monto === monto && simulacion.data.plazo_meses === plazo
+  const datos = igualAGuardada
+    ? { cuota: guardada.cuota, tea: guardada.tea }
+    : coincide && simulacion.data
+      ? { cuota: simulacion.data.cuota, tea: simulacion.data.tasa_ea }
+      : null
+
+  return (
+    <div className="flex flex-col gap-3 rounded-campo bg-fondo p-4" aria-live="polite" aria-busy={datos === null && !simulacion.isError}>
+      <p className="text-sm text-tinta-suave">
+        Para <span className="cifras font-semibold text-tinta">{formatoMoneda(monto)}</span> a{' '}
+        <span className="cifras font-semibold text-tinta">{plazo} meses</span>
+      </p>
+      {datos ? (
+        <CuotaConTea cuota={datos.cuota} tea={datos.tea} tamano="mediano" etiquetaCuota="Cuota estimada" />
+      ) : simulacion.isError ? (
+        <p className="text-sm text-alerta-700">No pudimos calcular la cuota ahora. La calculamos de nuevo al guardar.</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <p className="text-sm text-tinta-suave">Calculando tu cuota…</p>
+          <Skeleton className="h-8" />
+        </div>
+      )}
+      <p className="text-xs text-tinta-tenue">Es una estimación: no constituye aprobación.</p>
+    </div>
+  )
+}
+
+/** RF-06 FA-04: la cuota supera el límite de capacidad de pago. La cuota va con su TEA (CP0011, UX-14). */
+function AvisoCapacidad({ capacidad, tea }: { capacidad: NonNullable<SolicitudDetalle['capacidad_pago']>; tea: number }) {
+  return (
+    <Alert tono="advertencia" titulo="La cuota ocuparía una parte muy alta de tus ingresos">
+      La cuota estimada de <Dinero valor={capacidad.cuota_estimada} className="font-semibold" /> (TEA{' '}
+      <Porcentaje valor={tea} className="font-semibold" />) es el {capacidad.porcentaje.toLocaleString('es-CO')} % de lo que te queda
+      disponible (<Dinero valor={capacidad.ingreso_disponible} />
+      ). El máximo que aprobamos es el {capacidad.limite} %. Puedes radicar igual, pero es probable que no sea aprobada así.
+    </Alert>
   )
 }

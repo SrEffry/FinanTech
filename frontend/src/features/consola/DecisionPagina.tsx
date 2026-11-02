@@ -1,16 +1,18 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Navigate, useNavigate, useParams } from 'react-router'
-import { ShieldAlert } from 'lucide-react'
+import { ShieldAlert, TriangleAlert } from 'lucide-react'
 import { obtenerContextoDecision, obtenerExpediente, registrarDecision } from '../../lib/api/consola'
 import type { ContextoDecision, Expediente, NuevaDecision, ResultadoDecision } from '../../lib/api/tipos'
 import { mensajeDe } from '../../lib/errores'
 import { formatoFechaHora, formatoMoneda, formatoPorcentaje } from '../../lib/formato'
+import { estimarCuota, porcentajeDelDisponible } from '../../lib/cuota'
 import { Button } from '../../components/ui/Button'
-import { Field, Input, Textarea } from '../../components/ui/Field'
+import { Field, Textarea } from '../../components/ui/Field'
 import { Alert, Panel } from '../../components/ui/Feedback'
 import { Modal } from '../../components/ui/Modal'
 import { MoneyInput } from '../../components/ui/MoneyInput'
+import { EnteroInput, PercentInput } from '../../components/ui/NumeroInput'
 import { CargaPagina } from '../../components/ui/Spinner'
 import { useToast } from '../../components/ui/toastContexto'
 import { CuotaConTea } from '../../components/dominio/CuotaConTea'
@@ -44,8 +46,8 @@ function FormularioDecision({ expediente, contexto }: { expediente: Expediente; 
   const { avisar } = useToast()
   const [resultado, setResultado] = useState<ResultadoDecision | null>(null)
   const [monto, setMonto] = useState<number | null>(s.monto)
-  const [plazo, setPlazo] = useState<number>(s.plazo_meses)
-  const [tasa, setTasa] = useState<number>(s.tasa_ea)
+  const [plazo, setPlazo] = useState<number | null>(s.plazo_meses)
+  const [tasa, setTasa] = useState<number | null>(s.tasa_ea)
   const [motivo, setMotivo] = useState('')
   const [errores, setErrores] = useState<Record<string, string>>({})
   const [confirmando, setConfirmando] = useState(false)
@@ -58,7 +60,7 @@ function FormularioDecision({ expediente, contexto }: { expediente: Expediente; 
   const decision = useMutation({
     mutationFn: () => {
       const datos: NuevaDecision = { solicitud_id: s.id, resultado: resultado as ResultadoDecision, motivo: motivo.trim() }
-      if (resultado === 'aprobada_condicionada') datos.ajustes = { monto: monto ?? 0, plazo_meses: plazo, tasa_ea: tasa }
+      if (resultado === 'aprobada_condicionada') datos.ajustes = { monto: monto ?? 0, plazo_meses: plazo ?? 0, tasa_ea: tasa ?? 0 }
       return registrarDecision(datos)
     },
     onSuccess: (nuevo) => {
@@ -77,14 +79,23 @@ function FormularioDecision({ expediente, contexto }: { expediente: Expediente; 
     if (motivo.trim().length < 10) nuevos.motivo = 'Escribe el motivo de la decisión (al menos 10 caracteres).'
     if (resultado === 'aprobada_condicionada') {
       if (!monto) nuevos.monto = 'Escribe el monto aprobado.'
-      if (tasa > contexto.tasa_maxima_legal_ea) nuevos.tasa = `No puede pasar de la máxima legal (${formatoPorcentaje(contexto.tasa_maxima_legal_ea)}).`
-      if (!(plazo > 0)) nuevos.plazo = 'Escribe el plazo.'
+      if (!tasa) nuevos.tasa = 'Escribe la tasa efectiva anual.'
+      else if (tasa > contexto.tasa_maxima_legal_ea) nuevos.tasa = `No puede pasar de la máxima legal (${formatoPorcentaje(contexto.tasa_maxima_legal_ea)}).`
+      if (!plazo) nuevos.plazo = 'Escribe el plazo.'
     }
     setErrores(nuevos)
     if (Object.keys(nuevos).length === 0) setConfirmando(true)
   }
 
   const bloqueado = contexto.bloqueo !== null
+  // UX-09: con las condiciones ajustadas, el oficial ve la cuota con su TEA y la capacidad de pago.
+  const ajustada = resultado === 'aprobada_condicionada' && monto && plazo && tasa ? { monto, plazo_meses: plazo, tasa_ea: tasa } : null
+  const cuotaAjustada = ajustada ? estimarCuota(ajustada, { monto: s.monto, plazo_meses: s.plazo_meses, tasa_ea: s.tasa_ea, cuota: s.cuota_estimada }) : null
+  const disponible =
+    s.capacidad_pago?.ingreso_disponible ?? (s.financiero.ingreso_mensual ?? 0) - (s.financiero.egreso_mensual ?? 0)
+  const limite = s.capacidad_pago?.limite ?? 40
+  const porcentaje = cuotaAjustada !== null ? porcentajeDelDisponible(cuotaAjustada, disponible) : null
+  const superaCapacidad = porcentaje !== null && porcentaje > limite
 
   return (
     <div>
@@ -186,18 +197,16 @@ function FormularioDecision({ expediente, contexto }: { expediente: Expediente; 
                   </Field>
                   <div className="grid grid-cols-2 gap-3">
                     <Field id="ajuste-plazo" etiqueta="Plazo (meses)" error={errores.plazo}>
-                      <Input inputMode="numeric" className="cifras" value={plazo} onChange={(e) => setPlazo(Number(e.target.value.replace(/\D/g, '')))} />
+                      <EnteroInput valor={plazo} onCambiar={setPlazo} maximoDigitos={3} />
                     </Field>
-                    <Field id="ajuste-tasa" etiqueta="TEA (%)" error={errores.tasa}>
-                      <Input
-                        inputMode="decimal"
-                        className="cifras"
-                        value={tasa}
-                        onChange={(e) => setTasa(Number(e.target.value.replace(',', '.')) || 0)}
-                      />
+                    <Field id="ajuste-tasa" etiqueta="TEA (efectiva anual)" error={errores.tasa}>
+                      <PercentInput valor={tasa} onCambiar={setTasa} />
                     </Field>
                   </div>
                   <p className="text-xs text-tinta-tenue">Tasa máxima legal: {formatoPorcentaje(contexto.tasa_maxima_legal_ea)} E.A.</p>
+                  {ajustada && cuotaAjustada !== null ? (
+                    <ResumenAjuste cuota={cuotaAjustada} tea={ajustada.tasa_ea} porcentaje={porcentaje} limite={limite} supera={superaCapacidad} />
+                  ) : null}
                 </div>
               ) : null}
 
@@ -245,8 +254,13 @@ function FormularioDecision({ expediente, contexto }: { expediente: Expediente; 
             <div className="flex justify-between gap-4">
               <dt className="text-tinta-suave">Condiciones</dt>
               <dd className="text-right font-semibold">
-                {formatoMoneda(monto ?? 0)}, {plazo} meses, {formatoPorcentaje(tasa)} E.A.
+                {formatoMoneda(monto ?? 0)}, {plazo} meses, {formatoPorcentaje(tasa ?? 0)} E.A.
               </dd>
+            </div>
+          ) : null}
+          {ajustada && cuotaAjustada !== null ? (
+            <div className="border-t border-linea pt-3">
+              <ResumenAjuste cuota={cuotaAjustada} tea={ajustada.tasa_ea} porcentaje={porcentaje} limite={limite} supera={superaCapacidad} />
             </div>
           ) : null}
           <div className="flex flex-col gap-1">
@@ -255,6 +269,27 @@ function FormularioDecision({ expediente, contexto }: { expediente: Expediente; 
           </div>
         </dl>
       </Modal>
+    </div>
+  )
+}
+
+/** Cuota estimada y TEA del ajuste, con la cuota frente al ingreso disponible (UX-09, RN-41). */
+function ResumenAjuste({ cuota, tea, porcentaje, limite, supera }: { cuota: number; tea: number; porcentaje: number | null; limite: number; supera: boolean }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <CuotaConTea cuota={cuota} tea={tea} tamano="mediano" etiquetaCuota="Cuota estimada" />
+      {porcentaje !== null ? (
+        <p className={`flex items-start gap-2 text-sm ${supera ? 'font-medium text-alerta-700' : 'text-tinta-suave'}`}>
+          {supera ? <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" /> : null}
+          <span>
+            Cuota frente al disponible: {porcentaje.toLocaleString('es-CO')} % (límite {limite} %).
+            {supera ? ' Supera el límite de capacidad de pago.' : ''}
+          </span>
+        </p>
+      ) : (
+        <p className="text-sm text-tinta-suave">Sin ingreso disponible registrado para calcular la capacidad de pago.</p>
+      )}
+      <p className="text-xs text-tinta-tenue">Estimación. La cifra exacta la calcula el sistema al emitir la oferta.</p>
     </div>
   )
 }

@@ -10,6 +10,7 @@ import { Field, Input } from '../../components/ui/Field'
 import { Alert, Badge, Panel } from '../../components/ui/Feedback'
 import { Modal } from '../../components/ui/Modal'
 import { MoneyInput } from '../../components/ui/MoneyInput'
+import { EnteroInput, PercentInput } from '../../components/ui/NumeroInput'
 import { CargaPagina } from '../../components/ui/Spinner'
 import { useToast } from '../../components/ui/toastContexto'
 import { EncabezadoPagina } from '../../components/layouts/Comunes'
@@ -18,10 +19,6 @@ function hoy(): string {
   const fecha = new Date()
   fecha.setMinutes(fecha.getMinutes() - fecha.getTimezoneOffset())
   return fecha.toISOString().slice(0, 10)
-}
-
-function numero(texto: string): number {
-  return Number(texto.replace(',', '.')) || 0
 }
 
 /** Parametrización (8.6.2, UC16): producto, umbrales y vigencia, con simulación previa. */
@@ -85,16 +82,16 @@ function Editor({ parametros }: { parametros: Parametros }) {
       <Panel titulo="Reglas de decisión">
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <Field id="tasa-maxima" etiqueta="Tasa máxima legal (% E.A.)" error={campos.tasa_maxima_legal_ea}>
-            <Input inputMode="decimal" className="cifras" value={propuesta.tasa_maxima_legal_ea} onChange={(e) => cambiar({ tasa_maxima_legal_ea: numero(e.target.value) })} />
+            <PercentInput valor={propuesta.tasa_maxima_legal_ea} onCambiar={(v) => cambiar({ tasa_maxima_legal_ea: v ?? 0 })} />
           </Field>
           <Field id="umbral-aprobar" etiqueta="Aprobar desde (puntaje)" error={campos.umbral_aprobar}>
-            <Input inputMode="numeric" className="cifras" value={propuesta.umbral_aprobar} onChange={(e) => cambiar({ umbral_aprobar: numero(e.target.value) })} />
+            <EnteroInput valor={propuesta.umbral_aprobar} onCambiar={(v) => cambiar({ umbral_aprobar: v ?? 0 })} />
           </Field>
           <Field id="umbral-negar" etiqueta="Negar por debajo de" error={campos.umbral_negar}>
-            <Input inputMode="numeric" className="cifras" value={propuesta.umbral_negar} onChange={(e) => cambiar({ umbral_negar: numero(e.target.value) })} />
+            <EnteroInput valor={propuesta.umbral_negar} onCambiar={(v) => cambiar({ umbral_negar: v ?? 0 })} />
           </Field>
-          <Field id="limite-cuota" etiqueta="Cuota máxima / ingreso (%)" error={campos.limite_cuota_ingreso}>
-            <Input inputMode="numeric" className="cifras" value={propuesta.limite_cuota_ingreso} onChange={(e) => cambiar({ limite_cuota_ingreso: numero(e.target.value) })} />
+          <Field id="limite-cuota" etiqueta="Cuota máxima frente al ingreso" error={campos.limite_cuota_ingreso}>
+            <PercentInput valor={propuesta.limite_cuota_ingreso} decimales={0} onCambiar={(v) => cambiar({ limite_cuota_ingreso: v ?? 0 })} />
           </Field>
         </div>
       </Panel>
@@ -118,7 +115,7 @@ function Editor({ parametros }: { parametros: Parametros }) {
                   <th scope="row" className="py-2 pr-3 text-left font-medium">{p.nombre}</th>
                   <td className="py-2 pr-3">
                     <Field id={`tasa-${p.codigo}`} etiqueta={<span className="sr-only">TEA de {p.nombre}</span>} error={campos[`productos.${i}.tasa_ea`] ?? (p.tasa_ea > propuesta.tasa_maxima_legal_ea ? 'Supera la máxima legal.' : undefined)}>
-                      <Input inputMode="decimal" className="cifras w-24" value={p.tasa_ea} onChange={(e) => cambiarProducto(i, { tasa_ea: numero(e.target.value) })} />
+                      <PercentInput className="w-28" valor={p.tasa_ea} onCambiar={(v) => cambiarProducto(i, { tasa_ea: v ?? 0 })} />
                     </Field>
                   </td>
                   <td className="py-2 pr-3">
@@ -133,12 +130,12 @@ function Editor({ parametros }: { parametros: Parametros }) {
                   </td>
                   <td className="py-2 pr-3">
                     <Field id={`pmin-${p.codigo}`} etiqueta={<span className="sr-only">Plazo mínimo de {p.nombre}</span>}>
-                      <Input inputMode="numeric" className="cifras w-20" value={p.plazo_min} onChange={(e) => cambiarProducto(i, { plazo_min: numero(e.target.value) })} />
+                      <EnteroInput className="w-20" maximoDigitos={3} valor={p.plazo_min} onCambiar={(v) => cambiarProducto(i, { plazo_min: v ?? 0 })} />
                     </Field>
                   </td>
                   <td className="py-2">
                     <Field id={`pmax-${p.codigo}`} etiqueta={<span className="sr-only">Plazo máximo de {p.nombre}</span>} error={campos[`productos.${i}.plazo_max`]}>
-                      <Input inputMode="numeric" className="cifras w-20" value={p.plazo_max} onChange={(e) => cambiarProducto(i, { plazo_max: numero(e.target.value) })} />
+                      <EnteroInput className="w-20" maximoDigitos={3} valor={p.plazo_max} onCambiar={(v) => cambiarProducto(i, { plazo_max: v ?? 0 })} />
                     </Field>
                   </td>
                 </tr>
