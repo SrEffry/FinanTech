@@ -9,7 +9,7 @@ class PoliticaTratamiento extends Model
 {
     protected $table = 'identidad_politicas_tratamiento';
 
-    protected $fillable = ['version', 'vigente_desde', 'resumen'];
+    protected $fillable = ['version', 'vigente_desde', 'resumen', 'texto'];
 
     protected function casts(): array
     {

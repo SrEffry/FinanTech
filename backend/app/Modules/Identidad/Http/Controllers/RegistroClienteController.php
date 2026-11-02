@@ -5,13 +5,18 @@ namespace App\Modules\Identidad\Http\Controllers;
 use App\Modules\Identidad\Http\Requests\IniciarRegistroRequest;
 use App\Modules\Identidad\Models\PoliticaTratamiento;
 use App\Modules\Identidad\Models\RegistroPendiente;
+use App\Modules\Identidad\Services\Datos\UsuarioAutenticado;
 use App\Modules\Identidad\Services\RegistroCliente;
+use App\Modules\Identidad\Services\Sesiones;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class RegistroClienteController
 {
-    public function __construct(private readonly RegistroCliente $registro) {}
+    public function __construct(
+        private readonly RegistroCliente $registro,
+        private readonly Sesiones $sesiones,
+    ) {}
 
     /** Política vigente con sus finalidades; el portal muestra las opcionales sin marcar (RN-05). */
     public function politicaVigente(): JsonResponse
@@ -22,6 +27,7 @@ class RegistroClienteController
             'version' => $politica->version,
             'vigente_desde' => $politica->vigente_desde->toDateString(),
             'resumen' => $politica->resumen,
+            'texto' => $politica->texto ?? $politica->resumen, // D6 (UX-04)
             'finalidades' => $politica->finalidades->map(fn ($f) => [
                 'codigo' => $f->codigo,
                 'nombre' => $f->nombre,
@@ -52,11 +58,21 @@ class RegistroClienteController
 
         $cliente = $this->registro->verificar($registro, $datos['codigo_email'], $datos['codigo_telefono']);
 
-        return response()->json([
+        // El correo y el celular quedaron verificados con códigos de un solo uso: se abre la
+        // sesión para seguir con la verificación de identidad (RF-01 paso 9 → RF-02).
+        $usuario = $cliente->usuario()->with('rol')->first();
+        $respuesta = response()->json([
             'cliente_id' => $cliente->id,
             'estado_kyc' => $cliente->estado_kyc,
             'siguiente_paso' => 'verificacion_identidad',
+            'usuario' => UsuarioAutenticado::desde($usuario)->toArray(),
         ], 201);
+
+        foreach ($this->sesiones->abrir($usuario, $request) as $cookie) {
+            $respuesta->headers->setCookie($cookie);
+        }
+
+        return $respuesta;
     }
 
     private function respuestaPendiente(RegistroPendiente $pendiente): array

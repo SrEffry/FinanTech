@@ -2,6 +2,7 @@
 
 namespace App\Modules\Identidad\Models;
 
+use App\Modules\Identidad\Services\Enmascarar;
 use App\Modules\Identidad\Services\IndiceCiego;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
@@ -48,7 +49,7 @@ class Cliente extends Model
     /** RNF-06: en pantalla solo se muestran los últimos 4 dígitos. */
     protected function documentoEnmascarado(): Attribute
     {
-        return Attribute::get(fn () => str_repeat('•', max(0, strlen($this->num_documento) - 4)).substr($this->num_documento, -4));
+        return Attribute::get(fn () => Enmascarar::ultimosCuatro($this->num_documento));
     }
 
     public function usuario(): BelongsTo

@@ -55,4 +55,15 @@ class Usuario extends Authenticatable
     {
         return in_array($this->rol->codigo, $codigos, true);
     }
+
+    /** Roles de la consola interna: segundo factor siempre (RN-15) e inactividad de 15 min (RN-16). */
+    public function esInterno(): bool
+    {
+        return (bool) $this->rol->interno;
+    }
+
+    public function estaActivo(): bool
+    {
+        return $this->estado === self::ACTIVO;
+    }
 }

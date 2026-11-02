@@ -116,7 +116,7 @@ class RegistroCliente
         return $registro;
     }
 
-    public function verificar(RegistroPendiente $registro, string $codigoEmail, string $codigoTelefono): Cliente
+    public function verificar(RegistroPendiente $registro, #[\SensitiveParameter] string $codigoEmail, #[\SensitiveParameter] string $codigoTelefono): Cliente
     {
         $this->asegurarVigente($registro);
 
@@ -139,7 +139,15 @@ class RegistroCliente
             throw new ErrorNegocio('codigo_incorrecto', 'Alguno de los códigos no es correcto.', 422, ['intentos_restantes' => $restantes]);
         }
 
-        return DB::transaction(fn () => $this->crearCliente($registro));
+        try {
+            return DB::transaction(fn () => $this->crearCliente($registro));
+        } catch (ErrorNegocio $error) {
+            // D-04: el borrado del pendiente va fuera de la transacción revertida.
+            if ($error->codigo === 'cuenta_existente') {
+                $registro->delete();
+            }
+            throw $error;
+        }
     }
 
     private function crearCliente(RegistroPendiente $registro): Cliente
@@ -149,7 +157,6 @@ class RegistroCliente
         // La unicidad pudo cambiar mientras el registro esperaba la verificación.
         if (Cliente::where('num_documento_hash', $registro->num_documento_hash)->exists()
             || Usuario::where('email', $datos['email'])->exists()) {
-            $registro->delete();
             throw new ErrorNegocio('cuenta_existente', 'Ya existe una cuenta con estos datos. Si es tuya, recupera el acceso.', 409);
         }
 

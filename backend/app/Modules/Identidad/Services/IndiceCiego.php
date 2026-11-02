@@ -14,4 +14,10 @@ final class IndiceCiego
 
         return hash_hmac('sha256', 'documento:'.$normalizado, (string) config('finantech.indice_ciego_clave'));
     }
+
+    /** Identificador del contador de intentos de acceso (RN-12): no guarda el correo en claro. */
+    public static function correo(string $correo): string
+    {
+        return hash_hmac('sha256', 'correo:'.mb_strtolower(trim($correo)), (string) config('finantech.indice_ciego_clave'));
+    }
 }
