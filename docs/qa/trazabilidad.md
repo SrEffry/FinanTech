@@ -1,6 +1,6 @@
 # Matriz de trazabilidad — primera versión
 
-Mantiene: **qa-senior**. Corte: 01/11/2026. Fuentes: ERS (punto 7 requisitos, puntos 11 a 15 plan de pruebas), `docs/correcciones-ers-v1.1.md` y `docs/contrato-api-v1-frontend.md`.
+Mantiene: **qa-senior**. Corte: 02/11/2026. Fuentes: ERS (punto 7 requisitos, puntos 11 a 15 plan de pruebas), `docs/correcciones-ers-v1.1.md` y `docs/contrato-api-v1-frontend.md`.
 
 Cadena: **requisito → caso CP del plan (14.x) → prueba automatizada → estado**. Los 48 casos que no son del camino crítico (11.3) se cubren con las pruebas Pest de cada requisito.
 
@@ -33,6 +33,10 @@ Pruebas que cita la matriz (todas en `backend/tests/` salvo las de Vitest):
 | ESQ | `Feature/Infraestructura/EsquemaTest.php` | qa-senior |
 | SREG | `Feature/Seguridad/RegistroSeguridadTest.php` | qa-senior |
 | SSES | `Feature/Seguridad/SesionSeguridadTest.php` | qa-senior |
+| CCM | `Feature/Evaluacion/CasosCriticosMotorTest.php` (RN-43 activas; CP0013 y CP0014 en `todo()` hasta T10) | qa-senior |
+| NEU | `Feature/Identidad/RegistroNeutroTest.php` (P3, T30) | backend-senior |
+| SNEU | `Feature/Seguridad/RegistroNeutroSeguridadTest.php` (T32: log, cabeceras y señuelo frente a código equivocado) | qa-senior |
+| CI | `.github/workflows/ci.yml` (GitHub Actions: Pest con cobertura, `--group=arch`, motor ≥ 95 %; lint, Vitest y build del portal) | qa-senior |
 | VIT | `frontend/src/**/*.test.ts(x)` (Vitest) | frontend-senior |
 
 > Las pruebas de Vitest sobre `frontend/src/mocks/` (motor, cálculos) verifican la **lógica de referencia** del portal, no el backend. No cuentan como cobertura de un requisito hasta que la regla viva en Laravel.
@@ -44,10 +48,10 @@ Criterio de aprobación (12.3 con la corrección F1): **13 de 14 exitosos y CP00
 | CP | Requisitos | Prueba automatizada | Estado | Qué falta |
 |---|---|---|---|---|
 | CP0001 Conexión MySQL | MR-001, RI-09 | ESQ "CP0001" (MySQL 8 y no SQLite, InnoDB y utf8mb4 en todas las tablas, seis roles, usuarios sintéticos de los seis roles) | **Cubierto** | Paso 5 (tipos contra el diccionario de datos): revisión manual con la evidencia del esquema. |
-| CP0002 Frontera de módulos | MR-002, RNF-21 | ARCH (un caso por módulo, `Shared` sin módulos, sin funciones de depuración); ESQ (prefijo por módulo, sin llaves foráneas entre módulos) | **Parcial** | Paso 5: **no hay canalización de integración continua** en el repositorio. Pasos 2-4 (violación deliberada en rama desechable) se ejecutan a mano en T25. "Interfaz pública documentada" por módulo. |
+| CP0002 Frontera de módulos | MR-002, RNF-21 | ARCH (un caso por módulo, `Shared` sin módulos, sin funciones de depuración); ESQ (prefijo por módulo, sin llaves foráneas entre módulos); CI (paso propio `--group=arch` en cada push y pull request) | **Parcial** | Paso 5: la canalización existe (T31) y sus pasos se reprodujeron en local; falta verla en verde en GitHub cuando las personas suban `feature`. Pasos 2-4 (violación deliberada en rama desechable, la CI debe ponerse en rojo) se ejecutan a mano en T25. "Interfaz pública documentada" por módulo. |
 | CP0003 Adaptador simulado | MR-003, RF-02, RI-10 | CYV "CP0003 y CP0007" (éxito, < 0,85, ilegible con 5 intentos, caída, lista positiva, auditoría marcada como simulada, proveedor real sin contratar) | **En desarrollo** (T09) | Distintivo visible en cada pantalla (portal, T12) y selección por `SERVICIOS_EXTERNOS` sin cambio de código: validar en T14. |
 | CP0004 Registro del cliente | RF-01, RN-04, RN-06 | REG "CP0004" (4 pruebas); SREG "RNF-06" (cifrado, respuestas) | **Cubierto** (API) | Pasos 1-3 de interfaz (asistente de 4 pasos con progreso): verificación manual en T25. |
-| CP0005 Validaciones de registro | RN-01, RN-02, RN-03 | REG "CP0005" (6); SREG "CP0005 / RN-17" (4) | **Cubierto** | Ver observación O-01: el mensaje confirma que la cuenta existe; la ERS se contradice. |
+| CP0005 Validaciones de registro | RN-01, RN-02, RN-03, RN-17 | REG "CP0005" (6); SREG "CP0005 / RN-17" (4, ajustadas por backend a P3); NEU (P3: misma forma y código, latencia mínima, aviso al titular, señuelo, auditoría sin datos); SNEU (3) | **Cubierto** (copia de trabajo; T30 sin entregar) | P3: el duplicado responde 201 neutro, igual que un registro nuevo. Las 57 pruebas de registro pasan (02/11) sobre la copia de trabajo con T30 en curso; se confirma cuando backend entregue T30. Ver O-04 (canal residual). |
 | CP0006 Consentimiento sin preselección (crítico) | RN-04, RN-05, RN-18, RN-21 | REG "CP0006" (3); INM "CP0006 paso 7" (2); CYV "CP0006" (7: estado por finalidad, otorga y revoca como filas nuevas, RN-18, solo el titular); VIT `integracion.test.tsx` | **En desarrollo** (T08) | Paso 4 en pantalla con la API real (T12). Paso 6 pide "explicar y solicitar confirmación": hoy la API solo rechaza; confirmar con el gerente si basta. |
 | CP0007 Verificación de identidad | RF-02, RN-07, RN-08, RN-09, RN-10 | CYV "CP0003 y CP0007" (11); SOL "no se crea sin identidad verificada" y "vuelve a exigir la identidad al radicar" (RN-07) | **En desarrollo** (T09, T11) | Pasos 1 y 7 de punta a punta por HTTP cuando existan los endpoints de originación (T11). Paso 8 (las imágenes no quedan en el dispositivo): verificación manual. |
 | CP0008 Inicio de sesión con MFA | RF-03, RN-13, RN-14, RN-15, RN-16 | SES "CP0008" (13), "segundo factor" (4), "RBAC" (3); SPI | **Cubierto** (pasa; falta la revisión de T01 por el gerente) | La app móvil (paso 7) está fuera de la primera versión. |
@@ -55,12 +59,12 @@ Criterio de aprobación (12.3 con la corrección F1): **13 de 14 exitosos y CP00
 | CP0010 Auditoría inmutable (crítico) | RNF-08 | INM "CP0010" (4); ESQ (triggers en **toda** tabla con `SoloAdicion`: hoy 6 tablas); SES (inicios y fallos); CYV (llamadas a proveedores); SOL (transición rechazada auditada, historial de estados de solo adición) | **Parcial** | Eventos que faltan: decisiones (T15), parametrización (T22), exportaciones (T22), accesos a datos de terceros (consola, T17). Consulta filtrable por usuario, fecha y entidad (T22). |
 | CP0011 Simulación transparente (crítico) | RF-05, RN-23, RN-24, RN-25, RNF-20 | SIM "CP0011" (7) y rangos (5); PAR (7); VIT `componentes.test.tsx` (TEA junto a la cuota con el mismo peso) | **En desarrollo** (T03) | Validar con la entrega de T03: contraste con hoja de cálculo independiente, aviso "no constituye aprobación" en pantalla, plan descargable, recálculo < 1 s. |
 | CP0012 Radicación | RF-06, RN-28, RN-29, RN-30, RN-32, RN-33 | SOL (27: borrador, RN-28 también en la base, radicado `FT-AAAA-NNNNNN` sin repetir en concurrencia, RN-32, RN-33, evento `SolicitudRadicada`); MAQ (5); DIR (4); VIT `validarArchivo` | **Parcial** (T04 en servicio) | Endpoints HTTP, documentos JPG/PNG/PDF de hasta 10 MB validados en el servidor (RN-30), borrador y reanudación: T11. |
-| CP0013 Evaluación trazable | RF-08, RN-40, RN-41, RN-44, RN-46 | — (VIT `mocks/motor.test.ts`, solo referencia) | **Sin prueba** | T10 (motor, 95 % de cobertura) y T20. |
-| CP0014 Equidad del modelo (crítico) | RN-43, RNF-25 | — (VIT `mocks/motor.test.ts`, solo referencia) | **Sin prueba** | T10, T15 y T20 (pares sintéticos, reversión humana). Panel de equidad fuera (F2). |
+| CP0013 Evaluación trazable | RF-08, RN-40, RN-41, RN-44, RN-46 | CCM "CP0013" (14 `todo()`, uno por paso y por regla: bandas, límites exactos 700/699/500/499, RN-41, `version_reglas` y variables determinantes, solo adición, < 10 min, reejecución, central caída → manual, auditoría simulada, RN-19, 401/403); PAR; VIT (solo referencia) | **Sin prueba** (preparado) | T10 (motor). Las `todo()` pasan a pruebas reales en cuanto backend publique el motor; `phpunit.motor.xml` y la CI exigen el 95 % (RNF-12). |
+| CP0014 Equidad del modelo (crítico) | RN-43, RNF-25 | CCM "RN-43" (3 activas: ninguna columna sensible en `evaluacion_`, `originacion_` y `cliente_`; ningún identificador sensible en el código de Evaluacion; prueba del detector) y "CP0014" (7 `todo()`: catálogo sin sensibles ni aproximaciones, justificación por variable, variables determinantes dentro del catálogo, tres pares, reversión) | **Parcial** (guardas de RN-43) | T10 (catálogo de variables y pares sintéticos), T15 (reversión humana, paso 9). Panel de equidad fuera (F2): pasos 7 y 8 no aplican. |
 
-**Resumen hoy (01/11, noche):** 5 cubiertos (CP0001, CP0004, CP0005, CP0008, CP0009), 3 parciales (CP0002, CP0010, CP0012), 4 en desarrollo (CP0003, CP0006, CP0007, CP0011), 2 sin prueba (CP0013, CP0014). De los 4 críticos (CP0006, CP0010, CP0011, CP0014) ninguno está cerrado todavía; CP0014 no tiene nada.
+**Resumen hoy (02/11):** 5 cubiertos (CP0001, CP0004, CP0005, CP0008, CP0009), 4 parciales (CP0002, CP0010, CP0012, CP0014), 4 en desarrollo (CP0003, CP0006, CP0007, CP0011) y 1 sin prueba (CP0013, con los pasos preparados en `todo()`). De los 4 críticos (CP0006, CP0010, CP0011, CP0014) ninguno está cerrado todavía. CP0014 ya tiene las guardas de RN-43; le faltan el catálogo, los pares y la reversión (T10, T15). CP0005 se vuelve a validar con la respuesta neutra de P3 (T30 y T32).
 
-Última ejecución sobre `finantech_test_qa` (01/11, después de las correcciones de backend): **suite completa con 198 pruebas, todas en verde, incluida la de arquitectura**. Portal: **62 pruebas de Vitest en verde**.
+Última ejecución (02/11), clon limpio de `HEAD` más los archivos de QA de esta ronda, sobre `finantech_test_qa`: **201 pruebas en verde y 21 `todo`, arquitectura 9/9, cobertura 96,2 % global y 100 % en el motor** (secciones 5 y 6). Portal en Node 22: **lint, 59 pruebas de Vitest y build en verde** sobre `HEAD`. La copia de trabajo de los demás agentes (T11, T28 y T30 en curso) no se midió.
 
 Las pruebas de los defectos D-01 a D-04 llevan `->group('defectos')` y quedan como regresión. Una prueba que falle por un defecto nuevo se queda en rojo hasta que se corrija; no se salta (D7).
 
@@ -71,7 +75,7 @@ Las pruebas de los defectos D-01 a D-04 llevan `->group('defectos')` y quedan co
 | Requisito | CP | Prueba | Estado | Nota |
 |---|---|---|---|---|
 | RF-01 flujo principal | CP0004 | REG CP0004; SREG | Cubierto | |
-| RF-01 FA-01 documento existente | CP0005 | REG; SREG (mismo cuerpo para documento o correo) | Cubierto | O-01 |
+| RF-01 FA-01 documento existente | CP0005 | REG; SREG; NEU; SNEU | Cubierto (T30 en curso) | P3: respuesta neutra y aviso por correo al titular (manda RN-17). |
 | RF-01 FA-02 reenvío 60 s, 3 por hora | — | REG "códigos de verificación" | Cubierto | |
 | RF-01 FA-03 cliente migrado | — | — | Sin prueba | No hay migración de sistemas anteriores en la primera versión; confirmar alcance con el gerente. |
 | RF-01 códigos vencidos (10 min) y registro vencido (30 min) | — | SREG "RF-01 — flujos sin prueba" | Cubierto | |
@@ -90,7 +94,7 @@ Las pruebas de los defectos D-01 a D-04 llevan `->group('defectos')` y quedan co
 | RN-13 acceso 15 min, RN-14 renovación 7 días con rotación | CP0008 | SES | Cubierto | |
 | RN-15 MFA para internos | CP0008 | SES | Cubierto | |
 | RN-16 inactividad de consola 15 min | CP0008 | SES | Cubierto | |
-| RN-17 mensaje genérico | CP0009 | SES (cuerpo y latencia, recuperación); SREG (registro) | Cubierto | O-01 para el registro. |
+| RN-17 mensaje genérico | CP0005, CP0009 | SES (cuerpo y latencia, recuperación); SREG, NEU y SNEU (registro neutro, P3) | Cubierto | O-04 para el canal residual del registro. |
 | RF-04, RN-18, RN-21 | CP0006 | CYV; INM | En desarrollo (T08) | |
 | RN-19 consulta a centrales exige autorización | CP0012 | SOL (RN-33 toma el consentimiento del directorio) | Parcial | Se verifica de nuevo en el motor (T10). |
 | RN-20 revocación en 24 h, RN-22 anonimizar datos revocados | — | — | Sin prueba | Confirmar alcance con el gerente (RF-15 está recortado). |
@@ -111,7 +115,7 @@ Las pruebas de los defectos D-01 a D-04 llevan `->group('defectos')` y quedan co
 
 | Requisito | CP | Prueba | Estado | Nota |
 |---|---|---|---|---|
-| RF-08, RN-39 a RN-46 | CP0013, CP0014 | PAR (versión de parámetros, solo adición) | Sin prueba (T10) | Cobertura exigida: 95 % (RNF-12). |
+| RF-08, RN-39 a RN-46 | CP0013, CP0014 | PAR (versión de parámetros, solo adición); CCM (RN-43 activas, resto en `todo()`) | Sin prueba (T10) | Cobertura exigida: 95 %, medida con `phpunit.motor.xml` en la CI (RNF-12). |
 | RF-09, RN-47 a RN-52 | — | — | Sin prueba (T16, T23) | |
 | RF-10, RN-53 a RN-58 | CP0014 (reversión) | — | Sin prueba (T15) | Segregación (RN-56) y conflicto de interés (RN-55) en T20. |
 
@@ -131,12 +135,12 @@ RF-12 y RF-13 (RN-63 a RN-76), RF-14 (RN-77 a RN-82), RF-15 salvo consentimiento
 |---|---|---|---|
 | RNF-05 autenticación y autorización | SES "RBAC" (401, 403, CSRF); CYV (solo el titular); REG (longitud y mezcla); SREG (contraseña filtrada) | Parcial | Falta: no reutilizar las últimas 5 contraseñas; 401/403 de cada endpoint nuevo (T14). |
 | RNF-06 datos sensibles | REG (documento cifrado); SREG (registro pendiente cifrado, índice ciego con clave, respuestas sin documento); CYV (imágenes y rutas cifradas); SOL (referencia cifrada) | Parcial | D-01 y D-02 corregidos (regresión en SREG y SSES). Enmascarado a 4 dígitos: VIT `formato.test.ts` y SES (`documento_enmascarado`). |
-| RNF-07 vulnerabilidades | SREG (límite 10/min en registro, inyección y marcado rechazados, asignación masiva); SSES (límite por origen en sesión) | Parcial | D-03 corregido. Faltan análisis estático y de dependencias en integración continua, CSP. |
+| RNF-07 vulnerabilidades | SREG (límite 10/min en registro, inyección y marcado rechazados, asignación masiva); SSES (límite por origen en sesión) | Parcial | D-03 corregido. La CI ya existe (T31), pero aún sin análisis estático ni de dependencias (`composer audit`, `npm audit`): propuesta para la ronda 3. Falta CSP. |
 | RNF-08 auditoría | INM; ESQ (triggers); SES | Parcial | Ver CP0010. |
 | RNF-09 tolerancia a fallos | VIT `cliente.test.ts` (mensajes sin detalle técnico) | Parcial | Caída de terceros → evaluación manual: T09, T10. |
-| RNF-12 calidad y cobertura | — | **Sin medir** | No hay driver de cobertura (ver sección 5). |
+| RNF-12 calidad y cobertura | CI (`--coverage --min=75` y `phpunit.motor.xml --min=95` en cada push y pull request) | **Cubierto (cobertura)** | Línea de base del 02/11: **96,2 % global** y **100 % en Evaluacion** (sección 5). Faltan los estándares de código de RNF-12: analizador estático y formateador obligatorios en la CI (Pint ya está en `require-dev`) y complejidad ≤ 10: propuesta para la ronda 3. |
 | RNF-20 claridad financiera | VIT `CuotaConTea` | Parcial | |
-| RNF-25 equidad | — | Sin prueba (T10, T20) | |
+| RNF-25 equidad | CCM "RN-43" (esquema y código de Evaluacion) | Parcial | Pares sintéticos y reversión humana con T10, T15 y T20. |
 | RNF-01, RNF-02 rendimiento | — | Sin prueba | Medir en T25: simulación < 1 s, p95 < 500 ms. |
 | RNF-16, RNF-19 responsive y accesibilidad | lint `jsx-a11y` del portal | Parcial | Auditoría de ux-ui-senior (T06); verificación en 320, 375, 768 y 1440 px. |
 | RI-07 API REST `/api/v1` | todas las pruebas de API | Cubierto | |
@@ -152,47 +156,61 @@ Los cuatro defectos de la ronda 1 fueron **corregidos por backend-senior y verif
 | D-01 | Media (condición de T01, D7) | backend-senior | El adaptador `SmsSimulado` escribe el celular completo en el log. | SREG "el SMS simulado no deja el celular completo" | Corregido y verificado (01/11) |
 | D-03 | Baja (semana 2) | backend-senior | Un 404 de binding responde `No query results for model [App\Modules\Identidad\Models\RegistroPendiente] …` aun con `APP_DEBUG=false`: expone nombres internos. | SREG "un registro inexistente responde 404…" | Corregido y verificado (01/11) |
 | D-04 | Baja (semana 2) | backend-senior | Si el documento se registra por otra vía mientras se verifica, `crearCliente` borra el pendiente y lanza el 409 dentro de la misma transacción: el borrado se revierte y el pendiente queda vivo hasta vencer. | SREG "si otra cuenta tomó el documento…" | Corregido y verificado (01/11) |
-| O-01 | Decisión | gerente-proyecto | CP0005 pone como criterio de falla "el mensaje revela la existencia confirmada de la cuenta", pero RF-01 FA-01 pide informar "que ya hay una cuenta". Hoy el 409 `cuenta_existente` confirma que el documento o el correo existen (es indistinguible cuál, eso sí). Hay que decidir qué manda y corregir la ERS (v1.1). | — | Abierta: se escala a las personas (D7) |
-| O-02 | Media | gerente-proyecto | No hay canalización de integración continua: CP0002 paso 5 y RNF-07/RNF-12 ("en cada integración") no se pueden cumplir. | — | Abierta: se escala a las personas (D7) |
+| O-01 | Decisión | gerente-proyecto | CP0005 pone como criterio de falla "el mensaje revela la existencia confirmada de la cuenta", pero RF-01 FA-01 pide informar "que ya hay una cuenta". | NEU; SREG "CP0005 / RN-17" | **Resuelta por P3** (manda RN-17: respuesta neutra y aviso por correo al titular). La implementa backend-senior en T30; QA valida sus pruebas en T32 cuando la entregue. |
+| O-02 | Media | gerente-proyecto | No hay canalización de integración continua: CP0002 paso 5 y RNF-07/RNF-12 ("en cada integración") no se pueden cumplir. | CI | **Resuelta por P5** con T31 (`.github/workflows/ci.yml`). Queda verla en verde en GitHub. |
+| D-05 | **Alta** (bloqueaba la CI) | qa-senior | `phpunit.xml` declara la suite `tests/Unit`, pero la carpeta está vacía y git no la guarda. En un clon limpio (CI), Pest se detiene con `Test directory "tests/Unit" not found` y **no corre ninguna prueba**. En las copias locales no se ve porque la carpeta existe. Encontrado al reproducir el workflow con `git archive HEAD`. | Reproducción de CI | **Corregido (02/11):** `backend/tests/Unit/.gitkeep`. Las personas deben incluirlo en el commit de T31. |
+| O-04 | Baja (riesgo residual, para decidir) | gerente-proyecto | Con P3 queda un canal inevitable. Quien escribe **un documento ajeno con su propio correo** recibe en su bandeja `RegistroNoDisponibleMail` en lugar de un código, y con eso sabe que esa cédula ya tiene cuenta. El cuerpo de la API es neutro, pero el correo no puede serlo: mandar un código falso lo delataría al verificar. Mitigaciones que ya existen: límite de 10 registros por minuto por origen (SREG) y 3 avisos por hora al titular (NEU). Hoy la enumeración masiva de cédulas cuesta como mínimo un correo por intento y queda en la auditoría. | NEU "con un documento repetido…" | Abierta: aceptar el riesgo residual y anotarlo en la ERS v1.1 (CP0005), o pedir un límite por documento. |
 | O-03 | Baja | qa-senior | Las pruebas escribían en `storage/logs/laravel.log` de desarrollo (`testing.ERROR`). **Corregido (D7):** `<env name="LOG_CHANNEL" value="null"/>` en `phpunit.xml`. Las pruebas de logs siguen funcionando porque escuchan el evento `MessageLogged`. | — | Corregida (D7) |
 
 ## 5. Cobertura (RNF-12)
 
-**Hoy no se puede medir:** la imagen en uso no trae driver de cobertura (ni PCOV ni Xdebug). **D7:** el cambio quedó aprobado y aplicado en los archivos, pero **sin reconstruir**. El gerente anuncia la reconstrucción (`docker compose up -d --build app`) al cerrar la ronda 1. Cambio aplicado:
+PCOV está activo en la imagen desde el 01/11 (apagado por defecto, `pcov.enabled = 0` en `docker/php/php.ini`; se enciende solo al medir).
 
-```diff
---- a/docker/php/Dockerfile
-+++ b/docker/php/Dockerfile
-@@
- RUN apt-get update \
-     && apt-get install -y --no-install-recommends git unzip libzip-dev libicu-dev \
-     && docker-php-ext-install pdo_mysql bcmath intl zip opcache pcntl \
-+    && pecl install pcov \
-+    && docker-php-ext-enable pcov \
-     && rm -rf /var/lib/apt/lists/*
-```
+**Línea de base (02/11), sobre `HEAD` (`2f85f55`) + las pruebas de QA de esta ronda, en un clon limpio, sobre `finantech_test_qa`: 201 pruebas en verde y 21 `todo`.**
 
-```diff
---- a/docker/php/php.ini
-+++ b/docker/php/php.ini
-@@
- expose_php = Off
- date.timezone = America/Bogota
-+; RNF-12: PCOV instalado pero apagado; se enciende solo al medir cobertura.
-+pcov.enabled = 0
-+pcov.directory = /var/www/html/app
-+; RNF-06 (D-02): las trazas de excepción no guardan argumentos (contraseñas, códigos).
-+zend.exception_ignore_args = On
-```
+| Medida | Resultado | Exigido | Estado |
+|---|---|---|---|
+| Global, como mide `phpunit.xml` (todo `app/`) | **96,2 %** (1712/1780 sentencias; el texto de Pest dice 96,1 %) | ≥ 75 % | Cumple |
+| Global sin migraciones, seeders ni rutas | **96,6 %** (1313/1359) | — | Referencia: la diferencia es mínima, así que `phpunit.xml` no se cambia. |
+| Motor de reglas (`phpunit.motor.xml`: módulo Evaluacion sin `Database` ni `Routes`) | **100 %** (51/51; hoy solo `ParametrosVigentes`, `VersionParametros` y el proveedor) | ≥ 95 % | Cumple; la cifra que cuenta es la de T10. |
+| Lógica contable | — | ≥ 95 % | Fuera de la primera versión (RF-12, RF-13). |
 
-Comandos (después de `docker compose up -d --build app`):
+Por módulo (sin migraciones, seeders ni rutas): Identidad 95,8 %, Originacion 97,5 %, Cliente 99,2 %, Evaluacion 100 %, Shared 100 %.
+
+Archivos de lógica por debajo del 80 % (huecos conocidos, ninguno del camino crítico):
+
+| Archivo | Cobertura | Por qué | Acción |
+|---|---|---|---|
+| `Identidad/Adapters/ListasRestrictivasNoContratadas` | 0 % (0/2) | Ninguna prueba usa `SERVICIOS_EXTERNOS=real` con listas | backend-senior: una prueba como la de `VerificacionIdentidadNoContratada`. |
+| `Identidad/Mail/CodigoSegundoFactorMail`, `CodigoVerificacionMail`, `RecuperacionContrasenaMail` | 11 % a 25 % | Las pruebas usan `Mail::fake()` y nunca renderizan el correo | Renderizar cada correo una vez y verificar que no lleve datos sensibles (RNF-06). Lo agrega QA en T14. |
+| `Identidad/Adapters/SmsSimulado`, `Identidad/Models/Empleado` | 50 % | Las pruebas usan `SmsFalso`; `Empleado` no tiene uso todavía | Sin acción por ahora. |
+
+**Cómo se exige (propuesto a backend-senior en el tablero, 02/11):**
 
 ```bash
-# Global ≥ 75 %
+# Global ≥ 75 % (CI: paso "Pest completo con cobertura")
 docker compose exec -T -e DB_DATABASE=finantech_test_qa app php -d pcov.enabled=1 ./vendor/bin/pest --coverage --min=75
-# Motor de reglas ≥ 95 % (cuando exista T10): un phpunit.motor.xml con <source> solo del motor
+# Motor ≥ 95 % (CI: paso "Motor de reglas"): solo el módulo Evaluacion, con tests/Feature/Evaluacion y tests/Unit
 docker compose exec -T -e DB_DATABASE=finantech_test_qa app php -d pcov.enabled=1 ./vendor/bin/pest -c phpunit.motor.xml --coverage --min=95
 ```
 
-- Excluir de la medición lo que no es lógica (`*/Database/Migrations`, `*/Database/Seeders`, `*/Routes`) en el `<source>` de `phpunit.xml`.
-- Portal: `@vitest/coverage-v8` y `vitest run --coverage` (decisión de frontend-senior). La lógica que hoy vive en `src/mocks/` no cuenta.
+- `phpunit.motor.xml` mide **todo** el módulo Evaluacion salvo `Database` y `Routes`. Si backend separa el motor en una carpeta propia (por ejemplo `Evaluacion/Motor`), se ajusta el `<include>` entre los dos. Con T15 la decisión del oficial también vive en Evaluacion y queda dentro del 95 %, lo cual es más estricto que RNF-12. Si eso estorba, se acota el `<include>` al motor.
+- Solo cuentan las pruebas de `tests/Feature/Evaluacion` y `tests/Unit`: el motor debe llegar al 95 % con sus propias pruebas, no de rebote por las de otros módulos.
+- Medir con el código montado desde Windows es lento: la suite con cobertura tarda unos 17 minutos en `docker compose exec`, contra unos 3 minutos copiando el código dentro del contenedor. La CI corre en Linux y no tiene ese problema.
+- Portal: `@vitest/coverage-v8` y `vitest run --coverage` siguen pendientes (dependencia nueva: se pide por D13). La lógica que vive en `src/mocks/` no cuenta.
+
+## 6. Integración continua (P5, T31)
+
+`.github/workflows/ci.yml`, en cada `push` y cada `pull_request`, con permisos de solo lectura y cancelación de corridas viejas de la misma rama. Las acciones están fijadas por SHA de commit, con la versión en un comentario: `actions/checkout` v7.0.1, `shivammathur/setup-php` 2.40.0, `actions/cache` v6.1.0 y `actions/setup-node` v7.1.0.
+
+| Job | Pasos |
+|---|---|
+| **Backend** (ubuntu-24.04) | Servicio MySQL 8.4. PHP 8.4 con `pdo_mysql, bcmath, intl, zip, pcntl, opcache`, PCOV y los ini de `docker/php/php.ini` (`zend.exception_ignore_args`, zona horaria). `log_bin_trust_function_creators = 1` y utf8mb4 se fijan con `SET GLOBAL`, porque los contenedores de servicio de Actions no aceptan argumentos de arranque. Luego `docker/mysql/init.sql` (crea `finantech_test` y da los permisos), caché de Composer, `composer install`, `.env` desde `.env.example` con `key:generate` (sin secretos en el repositorio), Pest completo con `--coverage --min=75`, `--group=arch` (CP0002) en un paso propio y el motor con `--min=95`. |
+| **Portal** (ubuntu-24.04) | Node 22 con caché de npm, `npm ci`, `npm run lint`, `npm test` y `npm run build` en `frontend/`. |
+
+**Validación (02/11):**
+- actionlint 1.7.7 (con shellcheck): 0 errores.
+- Job del portal reproducido en `node:22` sobre `git archive HEAD`: `npm ci`, lint, Vitest 59/59 y build, todo correcto.
+- Job de backend reproducido en la imagen del proyecto sobre `git archive HEAD` más los archivos de esta ronda, con base limpia: `composer install` correcto, `key:generate` correcto, Pest con cobertura 201 en verde (salida 0), arch 9/9 (salida 0) y motor 100 % (salida 0).
+- La reproducción encontró D-05 (sección 4).
+- Falta ver la primera corrida en GitHub cuando las personas suban `feature`.

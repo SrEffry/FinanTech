@@ -1,0 +1,150 @@
+# Integración continua de PagaMas (P5, CP0002 paso 5, RNF-07, RNF-12).
+# Corre en cada push y en cada pull request:
+#   - backend: Pest completo sobre MySQL 8.4 con cobertura (PCOV) y la prueba de arquitectura (CP0002);
+#   - portal: lint, Vitest y build de frontend/.
+# Las acciones se fijan por SHA de commit (con la versión en el comentario) para que una
+# etiqueta movida no cambie lo que corre aquí.
+# Las credenciales de este archivo son solo de la base desechable del runner: no son secretos.
+
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (Pest + MySQL 8.4)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root_ci
+          MYSQL_USER: finantech
+          MYSQL_PASSWORD: finantech_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot_ci"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    defaults:
+      run:
+        working-directory: backend
+
+    # Las variables reales mandan sobre .env (Laravel no las sobrescribe); DB_DATABASE la fija phpunit.xml.
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USERNAME: finantech
+      DB_PASSWORD: finantech_ci
+      SERVICIOS_EXTERNOS: simulado
+
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: PHP 8.4 con las extensiones del Dockerfile y PCOV
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, bcmath, intl, zip, pcntl, opcache
+          coverage: pcov
+          tools: composer:v2
+          # Igual que docker/php/php.ini (D-02: las trazas no guardan argumentos).
+          ini-values: >-
+            memory_limit=512M,
+            date.timezone=America/Bogota,
+            zend.exception_ignore_args=On,
+            pcov.directory=${{ github.workspace }}/backend/app
+
+      # Los service containers de Actions no aceptan argumentos de arranque, así que las opciones
+      # del command de docker-compose.yml se fijan en caliente (son variables dinámicas).
+      # log_bin_trust_function_creators: permite que el usuario de la app cree los triggers de las
+      # tablas de solo adición (RNF-08, CP0010).
+      - name: Preparar MySQL y crear la base finantech_test
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -uroot -proot_ci -e "
+            SET GLOBAL log_bin_trust_function_creators = 1;
+            SET GLOBAL character_set_server = 'utf8mb4';
+            SET GLOBAL collation_server = 'utf8mb4_unicode_ci';"
+          mysql -h 127.0.0.1 -P 3306 -uroot -proot_ci < ../docker/mysql/init.sql
+          mysql -h 127.0.0.1 -P 3306 -uroot -proot_ci -e "
+            SELECT @@version AS mysql, @@log_bin_trust_function_creators AS confia_funciones;
+            SHOW DATABASES LIKE 'finantech_test';"
+
+      - name: Caché de Composer
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-${{ hashFiles('backend/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: composer install
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      # .env no está en el repositorio: se crea desde .env.example y se genera la clave.
+      - name: Crear .env y generar APP_KEY
+        run: |
+          cp .env.example .env
+          php artisan key:generate --ansi
+
+      # RNF-12: cobertura global mínima del 75 % en cada integración.
+      - name: Pest completo con cobertura (RNF-12, mínimo 75 %)
+        run: php -d pcov.enabled=1 vendor/bin/pest --coverage --min=75
+
+      # CP0002: la frontera de módulos se reporta en un paso propio para que su falla se vea sola.
+      - name: Frontera de módulos (CP0002, --group=arch)
+        run: vendor/bin/pest --group=arch
+
+      # RNF-12: 95 % en el motor de reglas (T10). phpunit.motor.xml mide solo el módulo Evaluacion.
+      - name: Motor de reglas (RNF-12, mínimo 95 %)
+        run: php -d pcov.enabled=1 vendor/bin/pest -c phpunit.motor.xml --coverage --min=95
+
+  portal:
+    name: Portal (lint, Vitest y build)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Node 22
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Pruebas (Vitest)
+        run: npm test
+
+      - name: Build
+        run: npm run build

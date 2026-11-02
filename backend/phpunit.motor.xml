@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    RNF-12: cobertura mínima del 95 % en el motor de reglas (T10, CP0013, CP0014).
+    Mide solo el módulo Evaluacion (sin migraciones, seeders ni rutas) con las pruebas del módulo.
+    Comando: ver el paso "Motor de reglas" de .github/workflows/ci.yml o docs/qa/trazabilidad.md (sección 5).
+    Si el motor se aparta en una carpeta propia (por ejemplo Evaluacion/Motor), se cambia el <include>
+    de común acuerdo entre backend-senior y qa-senior. La lógica contable (RF-12, RF-13) está fuera de la
+    primera versión; cuando exista se agrega aquí con el mismo umbral.
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="Motor">
+            <directory>tests/Feature/Evaluacion</directory>
+            <directory>tests/Unit</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>app/Modules/Evaluacion</directory>
+        </include>
+        <exclude>
+            <directory>app/Modules/Evaluacion/Database</directory>
+            <directory>app/Modules/Evaluacion/Routes</directory>
+        </exclude>
+    </source>
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <env name="BCRYPT_ROUNDS" value="4"/>
+        <env name="BROADCAST_CONNECTION" value="null"/>
+        <env name="CACHE_STORE" value="array"/>
+        <env name="DB_CONNECTION" value="mysql"/>
+        <env name="DB_DATABASE" value="finantech_test"/>
+        <env name="DB_URL" value=""/>
+        <env name="LOG_CHANNEL" value="null"/>
+        <env name="MAIL_MAILER" value="array"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="SESSION_DRIVER" value="array"/>
+        <env name="PULSE_ENABLED" value="false"/>
+        <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="NIGHTWATCH_ENABLED" value="false"/>
+    </php>
+</phpunit>
