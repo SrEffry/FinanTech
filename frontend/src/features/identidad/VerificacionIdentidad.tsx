@@ -1,15 +1,15 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
+import { CircleAlert, CircleCheck, Clock, ShieldX } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { enviarVerificacionIdentidad } from '../../lib/api/identidad'
-import type { EscenarioSimulado, VerificacionIdentidad as Resultado } from '../../lib/api/tipos'
+import type { EscenarioSimulado, ResultadoVerificacion, VerificacionIdentidad as Resultado } from '../../lib/api/tipos'
 import { mensajeDe } from '../../lib/errores'
 import { Button } from '../../components/ui/Button'
 import { Field, Select } from '../../components/ui/Field'
-import { FileDrop } from '../../components/ui/FileDrop'
-import { TIPOS_FOTO } from '../../lib/archivos'
 import { Alert } from '../../components/ui/Feedback'
 import { DistintivoSimulado } from '../../components/dominio/Distintivos'
 import { CLAVE_SESION, useServiciosSimulados } from '../acceso/sesion'
+import { CapturaFoto } from './CapturaFoto'
 
 const ESCENARIOS: { valor: EscenarioSimulado; texto: string }[] = [
   { valor: 'exito', texto: 'Identidad verificada' },
@@ -66,35 +66,27 @@ export function VerificacionIdentidad({ onTerminar }: Props) {
     if (Object.keys(errores).length === 0) envio.mutate()
   }
 
-  const final = resultado && resultado.resultado !== 'ilegible'
+  const final = resultado?.resultado && resultado.resultado !== 'ilegible'
 
   if (final && resultado) {
-    const tono =
-      resultado.resultado === 'verificado' ? 'exito' : resultado.resultado === 'no_continua' ? 'error' : 'advertencia'
+    const vista = RESULTADOS[resultado.resultado as Exclude<ResultadoVerificacion, 'ilegible'>]
     return (
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col items-start gap-5">
         {resultado.simulado ? <DistintivoSimulado que="Verificación simulada" /> : null}
-        <Alert
-          tono={tono}
-          titulo={
-            resultado.resultado === 'verificado'
-              ? 'Identidad verificada'
-              : resultado.resultado === 'revision_manual'
-                ? 'Revisaremos tus datos'
-                : resultado.resultado === 'en_cola'
-                  ? 'Lo intentaremos de nuevo'
-                  : 'No podemos continuar'
-          }
-        >
-          {resultado.mensaje}
-          {resultado.coincidencia !== null && resultado.resultado !== 'no_continua' ? (
-            <span className="mt-1 block">
-              Coincidencia de tu foto con el documento:{' '}
-              <span className="font-semibold">{resultado.coincidencia.toLocaleString('es-CO')}</span> (mínimo 0,85).
-            </span>
-          ) : null}
-        </Alert>
-        <Button onClick={() => onTerminar(resultado)}>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+          <span className={`flex size-14 shrink-0 items-center justify-center rounded-full ring-8 ${vista.circulo}`}>{vista.icono}</span>
+          <div className="flex flex-col gap-2" role={resultado.resultado === 'no_continua' ? 'alert' : 'status'}>
+            <h2 className="titular text-2xl font-semibold text-noche">{vista.titulo}</h2>
+            <p className="text-tinta-suave">{resultado.mensaje}</p>
+            {resultado.coincidencia !== null && resultado.resultado !== 'no_continua' ? (
+              <p className="text-sm text-tinta-suave">
+                Coincidencia de tu foto con el documento:{' '}
+                <span className="cifras font-semibold text-tinta">{resultado.coincidencia.toLocaleString('es-CO')}</span> (mínimo 0,85).
+              </p>
+            ) : null}
+          </div>
+        </div>
+        <Button tamano="lg" onClick={() => onTerminar(resultado)}>
           {resultado.resultado === 'verificado' ? 'Ir a mi portal' : 'Entendido'}
         </Button>
       </div>
@@ -102,7 +94,7 @@ export function VerificacionIdentidad({ onTerminar }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-7">
       {resultado?.resultado === 'ilegible' ? (
         <Alert tono="advertencia" titulo="Toma las fotos del documento de nuevo">
           {resultado.mensaje} Te quedan {resultado.intentos_restantes}{' '}
@@ -112,46 +104,28 @@ export function VerificacionIdentidad({ onTerminar }: Props) {
       {envio.isError ? <Alert tono="error">{mensajeDe(envio.error)}</Alert> : null}
 
       <section aria-labelledby="titulo-documento" className="flex flex-col gap-3">
-        <h2 id="titulo-documento" className="font-semibold">
-          Tu documento de identidad
-        </h2>
-        <p className="text-sm text-tinta-suave">
-          Ponlo sobre una superficie oscura, con buena luz y sin reflejos. Que se vean las cuatro esquinas.
-        </p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <FileDrop
-            etiqueta="Frente del documento"
-            captura="environment"
-            onSeleccionar={setFrente}
-            archivoActual={frente ? { nombre: frente.name, tamano: frente.size } : null}
-            error={faltantes.frente}
-          />
-          <FileDrop
-            etiqueta="Reverso del documento"
-            captura="environment"
-            onSeleccionar={setReverso}
-            archivoActual={reverso ? { nombre: reverso.name, tamano: reverso.size } : null}
-            error={faltantes.reverso}
-          />
+        <div className="flex flex-col gap-1">
+          <h2 id="titulo-documento" className="titular text-xl font-semibold text-noche">
+            Tu documento de identidad
+          </h2>
+          <p className="text-sm text-tinta-suave">Ponlo sobre una superficie oscura y encuádralo dentro de las esquinas.</p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <CapturaFoto tipo="frente" archivo={frente} onCambiar={setFrente} error={faltantes.frente} deshabilitado={envio.isPending} />
+          <CapturaFoto tipo="reverso" archivo={reverso} onCambiar={setReverso} error={faltantes.reverso} deshabilitado={envio.isPending} />
         </div>
       </section>
 
       <section aria-labelledby="titulo-rostro" className="flex flex-col gap-3">
-        <h2 id="titulo-rostro" className="font-semibold">
-          Prueba de vida
-        </h2>
-        <p className="text-sm text-tinta-suave">
-          Tómate una foto de frente, sin gafas ni gorra, en un lugar iluminado. La comparamos con la foto de tu documento.
-        </p>
-        <FileDrop
-          etiqueta="Foto de tu rostro"
-          descripcion="Toca para abrir la cámara frontal (JPG o PNG de hasta 10 MB)."
-          captura="user"
-          tipos={TIPOS_FOTO}
-          onSeleccionar={setRostro}
-          archivoActual={rostro ? { nombre: rostro.name, tamano: rostro.size } : null}
-          error={faltantes.rostro}
-        />
+        <div className="flex flex-col gap-1">
+          <h2 id="titulo-rostro" className="titular text-xl font-semibold text-noche">
+            Prueba de vida
+          </h2>
+          <p className="text-sm text-tinta-suave">La comparamos con la foto de tu documento. Las fotos no se guardan en tu celular.</p>
+        </div>
+        <div className="sm:max-w-[calc(50%-0.5rem)]">
+          <CapturaFoto tipo="rostro" archivo={rostro} onCambiar={setRostro} error={faltantes.rostro} deshabilitado={envio.isPending} />
+        </div>
       </section>
 
       {simulado ? (
@@ -173,9 +147,32 @@ export function VerificacionIdentidad({ onTerminar }: Props) {
         </div>
       ) : null}
 
-      <Button onClick={enviar} cargando={envio.isPending}>
+      <Button tamano="lg" onClick={enviar} cargando={envio.isPending} className="w-full sm:w-auto sm:self-start">
         Verificar mi identidad
       </Button>
     </div>
   )
+}
+
+const RESULTADOS: Record<Exclude<ResultadoVerificacion, 'ilegible'>, { titulo: string; icono: ReactNode; circulo: string }> = {
+  verificado: {
+    titulo: 'Identidad verificada',
+    icono: <CircleCheck aria-hidden="true" className="size-7 text-secundario-700" />,
+    circulo: 'bg-secundario-50 ring-secundario-50/50',
+  },
+  revision_manual: {
+    titulo: 'Revisaremos tus datos',
+    icono: <Clock aria-hidden="true" className="size-7 text-advertencia-700" />,
+    circulo: 'bg-advertencia-50 ring-advertencia-50/50',
+  },
+  en_cola: {
+    titulo: 'Lo intentaremos de nuevo',
+    icono: <CircleAlert aria-hidden="true" className="size-7 text-advertencia-700" />,
+    circulo: 'bg-advertencia-50 ring-advertencia-50/50',
+  },
+  no_continua: {
+    titulo: 'No podemos continuar',
+    icono: <ShieldX aria-hidden="true" className="size-7 text-alerta-700" />,
+    circulo: 'bg-alerta-50 ring-alerta-50/50',
+  },
 }

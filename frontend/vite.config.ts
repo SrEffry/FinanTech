@@ -19,5 +19,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     css: false,
+    // Margen para equipos cargados: con la máquina ocupada, montar una pantalla pasa de los 5 s por defecto.
+    testTimeout: 15_000,
   },
 })

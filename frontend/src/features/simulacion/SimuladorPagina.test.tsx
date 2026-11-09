@@ -66,7 +66,8 @@ describe('simulador en el celular (UX-07, RF-05)', () => {
     await usuario.click(libranza)
     expect(libranza).toBeChecked()
     expect(screen.getByText(/Libranza, desde 14,90 % E.A./)).toBeInTheDocument()
-  })
+    // La primera prueba del archivo paga la carga del simulador; con el equipo ocupado pasa de 5 s.
+  }, 15_000)
 
   it('cuando el recibo sale de la vista, la barra fija muestra cuota y TEA juntas y con el mismo peso (RNF-20)', async () => {
     montar()
