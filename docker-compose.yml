@@ -5,6 +5,9 @@ services:
     build: ./docker/php
     volumes:
       - ./backend:/var/www/html
+      # D24 (O-05): vendor vive en un volumen de Docker y no en el montaje de Windows, que es muy lento.
+      # Después de crear el contenedor hay que correr `docker compose exec app composer install`.
+      - vendor-data:/var/www/html/vendor
     depends_on:
       mysql:
         condition: service_healthy
@@ -49,3 +52,4 @@ services:
 
 volumes:
   mysql-data:
+  vendor-data:

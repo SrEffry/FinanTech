@@ -55,6 +55,8 @@ npm install
 npm run dev
 ```
 
+`vendor` vive en un volumen de Docker (`vendor-data`) y no en la carpeta del proyecto, porque leerla desde el montaje de Windows hace muy lenta la API. Por eso, **cada vez que se crea o se recrea el contenedor `app` en un volumen nuevo, o cambia `composer.lock`, hay que correr** `docker compose exec app composer install`. Sin ese paso, la API responde con error porque no encuentra `vendor/autoload.php`. Un cambio en un archivo PHP se ve en la API a más tardar 10 segundos después (`opcache.revalidate_freq`).
+
 | Servicio | Dirección |
 |---|---|
 | API | http://localhost:8000 (comprobar con `/up`) |
