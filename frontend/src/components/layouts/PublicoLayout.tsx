@@ -199,14 +199,21 @@ export function PantallaAcceso({ children, ancho = 'normal' }: { children: React
         </div>
         <p className="relative text-xs text-bruma">Proyecto académico de la Universidad de Córdoba: no ofrece crédito real.</p>
       </aside>
-      <main id="contenido" tabIndex={-1} className="flex min-h-dvh flex-col px-4 py-6 outline-none sm:px-8 lg:py-12">
-        <div className="lg:hidden">
-          <Link to="/" aria-label="FinanTech, ir al inicio" className="inline-flex rounded-campo">
-            <Logo />
+      <main id="contenido" tabIndex={-1} className="flex min-h-dvh flex-col outline-none lg:px-8 lg:py-12">
+        {/* En el celular la marca va arriba, en noche, y el formulario sube encima como una hoja. */}
+        <div className="sobre-oscuro trama-trenza relative overflow-hidden bg-noche px-4 pt-5 pb-12 text-white sm:px-8 lg:hidden">
+          <div aria-hidden="true" className="pointer-events-none absolute -top-24 -right-24 size-72 rounded-full bg-primario-600/45 blur-3xl" />
+          <Link to="/" aria-label="FinanTech, ir al inicio" className="relative inline-flex rounded-campo">
+            <Logo claro />
           </Link>
+          <p className="titular relative mt-6 max-w-xs text-xl leading-snug font-semibold">
+            Tu crédito, con la cuota y la tasa claras desde el primer número.
+          </p>
         </div>
-        <div className={`mx-auto flex w-full flex-1 flex-col justify-center py-8 ${ancho === 'amplio' ? 'max-w-2xl' : 'max-w-md'}`}>
-          {children}
+        <div className="relative -mt-6 flex flex-1 flex-col rounded-t-[1.5rem] bg-superficie px-4 shadow-[0_-12px_32px_-20px_rgb(14_34_64/0.5)] sm:px-8 lg:mt-0 lg:rounded-none lg:px-0 lg:shadow-none">
+          <div className={`mx-auto flex w-full flex-1 flex-col justify-center py-8 ${ancho === 'amplio' ? 'max-w-2xl' : 'max-w-md'}`}>
+            {children}
+          </div>
         </div>
       </main>
     </div>

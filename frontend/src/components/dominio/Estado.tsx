@@ -40,8 +40,8 @@ export function LineaEtapas({ historial, estado }: { historial: HitoEstado[]; es
                   ? 'bg-advertencia-500 text-tinta'
                   : etapa.tono === 'exito'
                     ? 'bg-secundario-700 text-white'
-                    : 'border-2 border-primario-600 bg-superficie text-primario-700'
-              : 'border border-linea bg-superficie text-tinta-tenue'
+                    : 'border-2 border-primario-600 bg-cielo text-primario-700 ring-4 ring-primario-100'
+              : 'border-[1.5px] border-linea-control bg-superficie text-tinta-suave'
         return (
           <li
             key={etapa.clave}

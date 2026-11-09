@@ -124,7 +124,7 @@ Corto (150 a 260 ms) y con salida suave (`ease-salida`). Con `prefers-reduced-mo
 | `Modal`, `Toast` | Sombra flotante, fondo noche translúcido con desenfoque; cierre de 44 px en el celular. |
 | `Logo` | F de dos trazos con el punto menta y la palabra en Archivo. |
 
-Layouts: `CabeceraPublica` (clara u oscura) y `PiePublico` en noche; `PantallaAcceso` con panel noche, trenza, halo azul y el recibo de ejemplo; `PortalLayout` con navegación en píldoras, inicial del cliente y barra inferior con indicador verde y negrita (SV-10); `ConsolaLayout` en noche con indicador menta. Foco en menta sobre todo lo oscuro (clase `sobre-oscuro`).
+Layouts: `CabeceraPublica` (clara u oscura) y `PiePublico` en noche; `PantallaAcceso` con panel noche, trenza, halo azul y el recibo de ejemplo en escritorio, y en el celular una banda noche con la marca y el formulario encima como una hoja; `NoDisponible` para lo que queda fuera de la primera versión (D22), con el texto "No disponible en esta versión", lo que sí se puede hacer y el botón de volver; `PortalLayout` con navegación en píldoras, inicial del cliente y barra inferior con indicador verde y negrita (SV-10); `ConsolaLayout` en noche con indicador menta. Foco en menta sobre todo lo oscuro (clase `sobre-oscuro`).
 
 ## 8. Reglas que el rediseño no rompe
 
