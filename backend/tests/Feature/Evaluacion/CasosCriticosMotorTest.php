@@ -6,14 +6,15 @@
  * - RN-43 / RNF-25: guardas activas desde ya, que pasan hoy y quedan como regresión: ninguna tabla
  *   de los módulos que alimentan al motor guarda un atributo sensible, y el código de Evaluacion no
  *   tiene variables, propiedades ni métodos con esos nombres.
- * - CP0013 y CP0014: un todo() por paso del plan de pruebas (ERS 14.13 y 14.14). Se convierten en
- *   pruebas reales cuando backend-senior publique T10 (motor, `evaluacion_evaluaciones`, catálogo de
- *   variables) y T15 (reversión humana). El panel de equidad (pasos 7 y 8 de CP0014) está fuera (F2).
+ * - CP0014 pasos 1-3: revisión independiente del catálogo de T10 con la lista de palabras de QA
+ *   (no con la lista de prohibidas del propio motor).
+ * - CP0013 y CP0014: los pasos los cubren las pruebas de backend-senior (ver el comentario de abajo);
+ *   aquí quedan en todo() solo los que dependen de T11, T15 o T20. El panel de equidad está fuera (F2).
  *
- * Este archivo es de qa-senior; las pruebas unitarias del motor las escribe backend-senior en sus
- * propios archivos.
+ * Este archivo es de qa-senior; las pruebas del motor las escribe backend-senior en sus archivos.
  */
 
+use App\Modules\Evaluacion\Motor\CatalogoVariables;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -97,50 +98,55 @@ describe('RN-43 y RNF-25 — sin atributos sensibles en lo que consume el motor'
     });
 });
 
-describe('CP0013 — evaluación trazable (RF-08, RN-40, RN-41, RN-44, RN-46)', function () {
-    it('paso 1-2: una solicitud de puntaje alto (>= 700) se aprueba automáticamente al consumir SolicitudRadicada')
-        ->todo('T10: escucha de SolicitudRadicada y central de riesgo simulada con escenario de puntaje alto');
-    it('paso 3: una solicitud de puntaje intermedio (500-699) se escala a la bandeja del analista (EN_ESTUDIO)')
-        ->todo('T10');
-    it('paso 4: una solicitud de puntaje bajo (< 500) se niega automáticamente con su causal')
-        ->todo('T10');
-    it('límites exactos de RN-40: 700 aprueba, 699 y 500 escalan, 499 niega')
-        ->todo('T10: umbrales leídos de la versión de parámetros, no fijos en el código');
-    it('paso 5: con puntaje alto, una cuota mayor al 40 % del ingreso disponible no se aprueba (RN-41)')
-        ->todo('T10');
-    it('paso 6: cada evaluación guarda puntaje, nivel de riesgo, decisión, variables determinantes y version_reglas (RN-44)')
-        ->todo('T10: tabla evaluacion_evaluaciones');
-    it('la tabla de evaluaciones es de solo adición: trait SoloAdicion y triggers BEFORE UPDATE/DELETE (RN-45, RNF-08)')
-        ->todo('T10: EsquemaTest ya exige triggers en toda tabla con SoloAdicion; aquí, update y delete rechazados');
-    it('paso 7: la evaluación concluye en menos de 10 minutos desde la radicación (RN-46)')
-        ->todo('T10: comparar radicada_en con la fecha de la evaluación');
-    it('paso 8: reejecutar con la misma versión de reglas da el mismo puntaje y la misma decisión, y ambas quedan registradas (RN-45)')
-        ->todo('T10');
-    it('una versión de parámetros nueva no cambia la evaluación ya registrada: se evalúa con la vigente al radicar')
-        ->todo('T10');
-    it('si la central de riesgo no responde, la solicitud pasa a evaluación manual y nunca se niega (RF-08 FA-02, RNF-09)')
-        ->todo('T10: escenario de caída del adaptador simulado');
-    it('la llamada a la central queda en la auditoría marcada como simulada (MR-003)')
-        ->todo('T10');
-    it('sin autorización de consulta a centrales no se consulta la central (RN-19)')
-        ->todo('T10');
-    it('GET evaluacion/solicitudes/{id}/evaluacion: 401 sin sesión, 403 para el cliente, 200 con version_reglas para analista y oficial')
-        ->todo('T10');
+describe('RN-43 / CP0014 pasos 1-3 — revisión independiente del catálogo del motor (T10)', function () {
+    it('ninguna variable del catálogo, ni su nombre ni su fuente, nombra un atributo sensible', function () {
+        $hallazgos = [];
+        foreach (CatalogoVariables::VARIABLES as $codigo => $variable) {
+            foreach ([$codigo, $variable['nombre'], $variable['fuente']] as $texto) {
+                foreach (preg_split('/[^\p{L}_]+/u', $texto, -1, PREG_SPLIT_NO_EMPTY) as $palabra) {
+                    if (rn43Sensibles($palabra) !== []) {
+                        $hallazgos[] = "{$codigo}: {$palabra}";
+                    }
+                }
+            }
+        }
+
+        expect(CatalogoVariables::VARIABLES)->not->toBeEmpty()
+            ->and($hallazgos)->toBe([], 'RN-43: '.implode(', ', $hallazgos));
+    });
+
+    it('la lista de prohibidas del motor incluye los seis atributos de RN-43 y las aproximaciones más comunes', function () {
+        $prohibidas = CatalogoVariables::PROHIBIDAS;
+
+        // Los seis de RN-43 (con el nombre que usa el motor).
+        expect($prohibidas)->toContain('sexo', 'estado_civil', 'origen_etnico', 'religion', 'afiliacion_politica', 'estado_salud');
+        // Aproximaciones que la ERS obliga a excluir (RNF-25) y que el portal o la solicitud podrían traer.
+        expect($prohibidas)->toContain('nombres', 'apellidos', 'foto', 'fecha_nacimiento', 'edad', 'direccion', 'personas_a_cargo', 'eps');
+    });
+
+    it('ninguna variable admitida por el motor está en la lista de prohibidas', function () {
+        foreach (CatalogoVariables::PROHIBIDAS as $prohibida) {
+            expect(CatalogoVariables::admitida($prohibida))->toBeFalse("{$prohibida} no debe admitirse");
+        }
+    });
 });
 
-describe('CP0014 — equidad del modelo (RN-43, RNF-25), caso crítico', function () {
-    it('paso 1: el catálogo de variables del motor no incluye ningún atributo sensible')
-        ->todo('T10: catálogo de variables publicado por el motor; usar rn43Sensibles()');
-    it('paso 2: el catálogo no incluye aproximaciones (nombre, foto o rostro, dirección o barrio, edad de los hijos, EPS, número de personas a cargo por estado civil)')
-        ->todo('T10: revisar con backend-senior la lista de aproximaciones antes de cerrar el catálogo');
-    it('paso 3: cada variable del catálogo tiene justificación de negocio documentada')
-        ->todo('T10');
-    it('las variables determinantes de toda evaluación pertenecen al catálogo')
-        ->todo('T10');
-    it('pasos 4-6: tres pares de solicitudes sintéticas idénticas en riesgo que difieren solo en un atributo sensible obtienen el mismo puntaje y la misma decisión')
-        ->todo('T10: pares por sexo, estado civil y edad o nombre; el atributo se cambia en Identidad, no en la solicitud');
-    it('paso 9: un oficial revierte una decisión automatizada con motivo y ambas decisiones quedan en el historial')
+/*
+ * Cobertura de CP0013 y CP0014 por las pruebas de backend-senior (T10), validadas por QA en la entrega:
+ * - tests/Unit/Evaluacion/MotorReglasTest.php: RN-40 en los límites exactos, RN-41, reproducibilidad,
+ *   catálogo con justificación, reglas solo con variables del catálogo, entrada sin atributos prohibidos.
+ * - tests/Feature/Evaluacion/EvaluacionAutomaticaTest.php: CP0013 pasos 1 a 8, solo adición, central caída
+ *   y sin autorización (RF-08 FA-02, RN-19), modo real, CP0014 pasos 4 a 6 (tres pares) y 401/403/404 de
+ *   GET evaluacion/solicitudes/{id}/evaluacion.
+ * - tests/Feature/Recorrido/FlujoVitalP9Test.php: CP0013 de punta a punta por HTTP (el cliente radica, el motor
+ *   evalúa y el analista consulta la evaluación con version_reglas).
+ * Aquí quedan solo los pasos que dependen de otras tareas.
+ */
+describe('CP0014 — pasos de punta a punta que dependen de otras tareas', function () {
+    it('CP0014 pasos 4-6 por HTTP: tres pares radicados desde el portal obtienen el mismo puntaje y la misma decisión')
+        ->todo('T11 + T20');
+    it('CP0014 paso 9: un oficial revierte una decisión automatizada con motivo y ambas decisiones quedan en el historial')
         ->todo('T15: decisiones de solo adición (RN-58)');
-    it('pasos 7-8: panel de equidad por segmento agregado')
+    it('CP0014 pasos 7-8: panel de equidad por segmento agregado')
         ->todo('Fuera de la primera versión (F2, RF-14)');
 });

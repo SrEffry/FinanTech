@@ -199,6 +199,8 @@ Ajustar el punto 2 del Capítulo 2: "diecisiete casos de uso en cuatro módulos"
 
 Las reversiones de una decisión automatizada (RF-10 FA-02) no son estados: se registran como una nueva fila en DECISION.
 
+**Primera versión (P10, aprobado por Efren el 08/11):** el concepto del analista se posterga. La transición EN_ESTUDIO → EN_DECISION la hace el sistema, enseguida después de que el motor deja la solicitud EN_ESTUDIO (puntaje de 500 a 699, cuota sobre el límite o tercero no disponible), y el historial guarda el motivo "Concepto del analista postergado en la primera versión (P9)". El oficial decide con la evaluación a la vista. Cuando se implemente el concepto del analista, esa transición vuelve a depender de él.
+
 **E4. Ajustes al modelo relacional y al diccionario de datos.**
 
 | Tabla | Cambio | Motivo |

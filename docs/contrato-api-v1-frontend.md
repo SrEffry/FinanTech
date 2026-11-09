@@ -57,6 +57,16 @@ Lo que el portal ya implementa en `frontend/src/lib/api/cliente.ts`, y cómo lo 
 
 **Registro (RF-01):** `POST clientes/registro/{id}/verificar` crea el cliente **y abre la sesión** (desde el 01/11), porque el paso 4 del asistente (verificar la identidad) la necesita.
 
+**Registro neutro (P3, RN-17 sobre RF-01 FA-01, CP0005; backend-senior, 02/11):** `POST clientes/registro` **ya no responde 409 `cuenta_existente`**. Si el documento o el correo ya tienen cuenta, responde **201 con la misma forma** (`registro_id`, `codigos_expiran_en`, `reenvio_disponible_en`) y al menos el mismo tiempo (500 ms) que un registro nuevo. Por dentro:
+- el titular de la cuenta recibe por correo el aviso "Alguien intentó crear una cuenta con tus datos" (máximo 3 por hora);
+- si solo el documento existía y el correo es nuevo, ese correo recibe "No pudimos continuar con tu registro", que no confirma la cuenta y remite a recuperar el acceso o a atención;
+- el celular recibe su SMS como siempre, y `reenviar` se comporta igual (mismos límites);
+- `verificar` sobre ese registro responde siempre como un código equivocado (`codigo_incorrecto` con `intentos_restantes`, luego `intentos_agotados`).
+- `409 cuenta_existente` **solo** puede salir ya en `verificar`, si otra vía creó la cuenta mientras se verificaba (carrera rara, D-04).
+- El portal no necesita cambiar nada para que funcione: la pantalla de códigos queda a la espera. Sugerencia de texto en esa pantalla: "Si ya tienes una cuenta, revisa tu correo: te contamos cómo entrar".
+
+**SMS simulado (T33):** además de `laravel.log`, cada SMS llega a Mailpit (http://localhost:8025) con el asunto `[SMS SIMULADO] para •••• 1234` (celular enmascarado). Nunca en producción; se apaga con `SMS_SIMULADO_BUZON=` vacío.
+
 ### Simulación
 
 | Método y ruta | Cuerpo | Respuesta | Errores |
@@ -68,15 +78,15 @@ Lo que el portal ya implementa en `frontend/src/lib/api/cliente.ts`, y cómo lo 
 
 | Método y ruta | Cuerpo | Respuesta | Errores |
 |---|---|---|---|
-| `GET originacion/solicitudes` | — | `SolicitudResumen[]`, solo las propias (RN-35) | — |
-| `POST originacion/solicitudes` | `{producto, monto, plazo_meses}` | `SolicitudDetalle` en BORRADOR, con datos laborales y financieros precargados de la última solicitud (RN-32) | 409 `identidad_no_verificada` (RN-07), 409 `solicitud_activa` (`datos.solicitud_id`, RN-28) |
-| `GET originacion/solicitudes/{id}` | — | `SolicitudDetalle`, con `capacidad_pago` y `historial` | 404 `no_encontrada` |
-| `PATCH originacion/solicitudes/{id}` | `CambiosBorrador` | `SolicitudDetalle`. Si cambia la ocupación, se recalculan los documentos requeridos. | 409 `no_editable`, 422 de validación |
-| `POST .../{id}/documentos` | multipart `tipo`, `archivo` (JPG, PNG o PDF de hasta 10 MB, RN-30) | `DocumentoSolicitud` | 422 `archivo_no_permitido`, `documento_invalido` |
-| `POST .../{id}/radicar` | — | `SolicitudDetalle` en RADICADA, con radicado `FT-AAAA-NNNNNN` (RN-29) | 422 de validación (`laboral.*`, `financiero.*`, `referencia.*`), `documentos_incompletos`, `consulta_centrales_requerida` (RN-33) |
-| `POST .../{id}/enviar-documentos` | — | `SolicitudDetalle`: de PENDIENTE_CLIENTE pasa a RADICADA | 422 `documentos_incompletos` |
-| `GET .../{id}/decision` | — | `ExplicacionDecision`: sin códigos ni pesos del modelo (RN-52) | 404 `sin_decision` |
-| `POST .../{id}/reconsideraciones` | multipart `argumentos` (mínimo 20 caracteres) y `adjuntos[]` | `ExplicacionDecision`: de NEGADA pasa a EN_ESTUDIO (RN-49) | 409 `reconsideracion_existente`, `reconsideracion_no_disponible` |
+| `GET originacion/solicitudes` (rol cliente; **en Laravel desde el 02/11**) | — | `SolicitudResumen[]`, solo las propias (RN-35), la más reciente primero | — |
+| `POST originacion/solicitudes` (**en Laravel**) | `{producto, monto, plazo_meses}` | 201 `SolicitudDetalle` en BORRADOR, con datos laborales, financieros y la referencia precargados de la última solicitud (RN-32) y los documentos de esa ocupación en `pendiente`. Monto y plazo se llevan al rango del producto (RF-05 FA-01). | 409 `identidad_no_verificada` (RN-07), 409 `solicitud_activa` (`datos.solicitud_id`, `datos.estado` técnico, RN-28), 422 `producto_invalido` |
+| `GET originacion/solicitudes/{id}` (**en Laravel**) | — | `SolicitudDetalle`, con `capacidad_pago` (`limite` sale de los parámetros vigentes) y `historial`. `oferta_id` es `null` hasta T18. | 404 `no_encontrada`, también si la solicitud es de otro cliente (RN-35) |
+| `PATCH originacion/solicitudes/{id}` (**en Laravel**) | `CambiosBorrador` (se puede guardar a medias; claves de más, como un parentesco, dan 422) | `SolicitudDetalle`. Si cambia monto o plazo, se recalculan tasa y cuota con los parámetros vigentes; si cambia la ocupación, los documentos requeridos (los que ya no aplican se borran con su archivo). | 409 `no_editable`, 422 de validación (`monto`/`plazo_meses`: "…fuera del rango del producto.") |
+| `POST .../{id}/documentos` (**en Laravel**) | multipart `tipo`, `archivo` (JPG, PNG o PDF de hasta 10 MB, RN-30; el tipo se toma del contenido) | `DocumentoSolicitud`. Solo en BORRADOR o PENDIENTE_CLIENTE. El archivo se guarda cifrado y la ruta va cifrada en la base. | 409 `no_editable`, 422 `archivo_no_permitido`, `documento_invalido` |
+| `POST .../{id}/radicar` (**en Laravel**) | — | `SolicitudDetalle` en RADICADA, con radicado `FT-AAAA-NNNNNN` (RN-29). La casilla de consulta a centrales queda como otorgamiento en `identidad/consentimientos` (RN-33, canal `web`). Publica `Originacion\Events\SolicitudRadicada` (CP0012). | 409 `no_editable`, `identidad_no_verificada`; 422 de validación (`laboral.*`, `financiero.*`, `referencia.*`), `documentos_incompletos` (`datos.documentos`: tipos que faltan), `consulta_centrales_requerida` (RN-33) |
+| `POST .../{id}/enviar-documentos` (**en Laravel**) | — | `SolicitudDetalle`: de PENDIENTE_CLIENTE pasa a RADICADA con el mismo radicado y publica `Originacion\Events\DocumentosEnviados` (el paso siguiente lo dan T10/T17) | 409 `no_editable`, 422 `documentos_incompletos` |
+| `GET .../{id}/decision` (**en Laravel desde el 09/11**, D26, T16 mínimo) | — | `ExplicacionDecision`, solo para el titular (RN-35). Textos de un catálogo en lenguaje claro: sin códigos, pesos, puntaje ni versión de reglas (RN-52), y nunca el motivo interno del oficial (D6/UX-03). Hasta 3 `variables` (en una negada, solo las que restaron); vacío si no hubo evaluación automática. Campos nuevos: `simulado` (MR-004, tomado de la evaluación) y `oferta_id` (UX-31). Reconsideración postergada (T23): `puede_reconsiderar` en `false`, `reconsideracion` y `reconsideracion_vence_en` en `null`. El envío a comité no cuenta como decisión. | 404 `sin_decision`; 404 `no_encontrada` si es de otro cliente |
+| `POST .../{id}/reconsideraciones` (simulado hasta T23) | multipart `argumentos` (mínimo 20 caracteres) y `adjuntos[]` | `ExplicacionDecision`: de NEGADA pasa a EN_ESTUDIO (RN-49) | 409 `reconsideracion_existente`, `reconsideracion_no_disponible` |
 
 Referencias personales: solo `nombre` y `celular`. **No se pide el parentesco**, porque aproxima el estado civil (RN-43).
 
@@ -84,23 +94,29 @@ Referencias personales: solo `nombre` y `celular`. **No se pide el parentesco**,
 
 | Método y ruta | Cuerpo | Respuesta | Errores |
 |---|---|---|---|
-| `GET desembolso/ofertas/{id}` | — | `Oferta`. Vence a los 15 días (RN-59). Si fue condicionada, `condiciones_originales` trae lo que pidió el cliente. | 404 |
-| `POST .../{id}/desafio-mfa` | — | `DesafioMfa` (RN-61) | 409 `oferta_vencida`, `oferta_no_vigente` |
-| `POST .../{id}/aceptar` | `{declaracion: true, desafio_id, codigo}` | `Oferta` firmada, con `firma {huella_sha256, sellado_en, simulada}`. La solicitud pasa por OFERTA_ACEPTADA → FORMALIZADA. | 422 `declaracion_requerida`, errores del código |
-| `POST .../{id}/rechazar` | `{motivo?}` | `Oferta` rechazada | 409 |
+| `GET desembolso/ofertas/{id}` (rol cliente; **en Laravel desde el 07/11**) | — | `Oferta`, con `valor_a_recibir` (UX-15). Vence a los 15 días (RN-59): al consultarla vencida pasa a `vencida` y la solicitud a OFERTA_VENCIDA. Si fue condicionada, `condiciones_originales` trae lo que pidió el cliente. El pagaré solo muestra los 4 últimos dígitos del documento. | 404 `no_encontrada`, también si es de otro cliente |
+| `POST .../{id}/desafio-mfa` (**en Laravel**) | — | `DesafioMfa` (RN-61); el código llega al correo (Mailpit en desarrollo), con propósito `aceptar_oferta` y atado a esta oferta | 409 `oferta_vencida`, `oferta_no_vigente`; 429 por exceso |
+| `POST .../{id}/aceptar` (**en Laravel**) | `{declaracion: true, desafio_id, codigo}` | `Oferta` firmada, con `firma {huella_sha256, sellado_en, simulada}` (`FirmaElectronicaService`; en modo simulado `simulada: true` y auditoría con `modo_simulado`, MR-004). La solicitud pasa por OFERTA_ACEPTADA → FORMALIZADA. | 409 `oferta_vencida`, `oferta_no_vigente`; 422 `declaracion_requerida`, `codigo_incorrecto` (`datos.intentos_restantes`), `codigo_vencido`, `intentos_agotados`; 503 `firma_no_disponible` (RF-11 FA-03: la oferta sigue vigente) |
+| `POST .../{id}/rechazar` (**en Laravel**) | `{motivo?}` | `Oferta` rechazada; la solicitud pasa a OFERTA_RECHAZADA | 409 `oferta_vencida`, `oferta_no_vigente` |
+
+**Emisión:** Desembolso escucha `Evaluacion\Events\DecisionRegistrada` (aprobada o aprobada condicionada, automática o del oficial) y crea la oferta con las condiciones finales, una sola por decisión. La solicitud muestra `oferta_id` y, mientras la oferta está vigente, `accion_pendiente: {tipo: 'oferta', oferta_id}`.
 
 ### Consola interna
 
 | Método y ruta | Rol | Cuerpo y filtros | Respuesta | Errores |
 |---|---|---|---|---|
-| `GET originacion/bandeja` | analista, oficial | `?estado&producto&monto_min&monto_max` | `Bandeja`. El analista ve lo asignado en EN_ESTUDIO o PENDIENTE_CLIENTE; el oficial, EN_DECISION o EN_COMITE. | — |
-| `GET originacion/expedientes/{id}` | analista, oficial | — | `Expediente` | 404 |
+| `GET originacion/bandeja` (**en Laravel desde el 07/11**, V3) | analista, oficial | `?estado&producto&monto_min&monto_max` (`producto` acepta el nombre o el código) | `Bandeja`, ordenada por `sla_vence_en`. El oficial ve EN_DECISION y EN_COMITE. En la primera versión no hay asignación ni concepto del analista (P9, D20): su cola (EN_ESTUDIO, PENDIENTE_CLIENTE) sale casi siempre vacía. Semáforo: EN_DECISION 24 h, EN_COMITE 48 h; `por_vencer` con el 25 % o menos del plazo. `reconsideracion` siempre `false` hasta T23. Campo de más: `producto_codigo`. | 401, 403 |
+| `GET originacion/expedientes/{id}` (**en Laravel desde el 07/11**, V3) | analista, oficial | — | `Expediente`. `central` sale de la última evaluación (con `fuente: simulada` en modo simulado y `calificacion: "No informada"`), o `null` si no hubo evaluación automática. `observaciones` `[]`, `concepto`, `analista` y `reconsideracion` `null` hasta T17 y T23. | 401, 403, 404 `no_encontrada` (no existe o no está radicada) |
 | `POST .../{id}/observaciones` | analista, oficial | `{texto}` | `Observacion` | 422 |
 | `POST .../{id}/documentos-requeridos` | analista | `{documentos: [{tipo, motivo}]}` | `Expediente`: pasa a PENDIENTE_CLIENTE y el cliente tiene 15 días | 409 `estado_invalido` |
-| `GET evaluacion/solicitudes/{id}/evaluacion` | analista, oficial | — | `Evaluacion`, **siempre con `version_reglas`** (RN-44) | 404 `sin_evaluacion` (la central no respondió) |
+| `GET evaluacion/solicitudes/{id}/evaluacion` (**en Laravel desde el 02/11**, T10) | analista, oficial | — | `Evaluacion`, **siempre con `version_reglas`** (RN-44). Campos de más, que el portal puede ignorar: `solicitud_id`, `secuencia` (RN-45: una reevaluación es una fila nueva; se devuelve la última), `causal` (variable que más restó si se negó, o `cuota_supera_limite` si RN-41 impidió aprobar) y `version_parametros`. `duracion_segundos` va de la radicación al resultado (RN-46). | 404 `sin_evaluacion` (la central no respondió, faltó la autorización o pasó a estudio manual) |
 | `POST evaluacion/solicitudes/{id}/concepto` | analista | `{recomendacion, texto}` | `Expediente`: pasa a EN_DECISION | 409, 422 |
-| `GET evaluacion/decisiones/contexto/{id}` | oficial | — | `ContextoDecision`: atribución, tasa máxima y `bloqueo` por conflicto o por haber parametrizado | — |
-| `POST evaluacion/decisiones` | oficial | `NuevaDecision` | `Expediente`. Las aprobaciones emiten la oferta. **Las decisiones son de solo adición** (RN-58). | 403 `fuera_de_atribucion` (RN-53), `conflicto_interes` (RN-55), `segregacion` (RN-56); 422 `motivo_requerido` (RN-54), `tasa_supera_maxima` (RN-57), `ajuste_fuera_de_rango`; 409 `en_comite` |
+| `GET evaluacion/decisiones/contexto/{id}` (**en Laravel desde el 07/11**, T15) | oficial | — | `ContextoDecision`: atribución, tasa máxima legal vigente y `bloqueo` (`conflicto_interes` si el oficial es el cliente o declaró un vínculo con él; `segregacion` si publicó una versión de parámetros). `decisiones_previas` incluye las del motor (`automatizada: true`, autor "Motor de reglas"). | 401, 403, 404 `no_encontrada` |
+| `POST evaluacion/decisiones` (**en Laravel desde el 07/11**, T15) | oficial | `NuevaDecision` | **201** con el `Expediente`. Sin `ajustes` se aprueba lo pedido a la tasa de la solicitud. Toda decisión final, también la automática del motor (RN-46), publica `Evaluacion\Events\DecisionRegistrada(solicitudId, decisionId, clienteId, resultado, monto, plazoMeses, tasaEa, automatizada, motivoCondicion, decididaEn)` con las condiciones finales (firma de fullstack-senior, 07/11); el envío a comité no la publica. Desembolso la escucha para emitir la oferta cuando `resultado` empieza por `aprobada`. **Las decisiones son de solo adición** (RN-58, trait y triggers). Si otro oficial decidió primero, 409 `transicion_invalida` y no se guarda nada. | 403 `fuera_de_atribucion` (RN-53), `conflicto_interes` (RN-55), `segregacion` (RN-56); 422 `motivo_requerido` (RN-54, menos de 10 caracteres), `resultado_invalido`, `tasa_supera_maxima` (RN-57), `ajuste_fuera_de_rango`, validación de `solicitud_id` y `ajustes`; 409 `en_comite`, `estado_invalido`; 404 `no_encontrada` |
+
+**Primera versión (P9):** el concepto del analista está postergado. Cuando el motor escala (500–699, cuota sobre el 40 % o tercero caído), la solicitud pasa por EN_ESTUDIO y sigue enseguida a EN_DECISION con el motivo "Concepto del analista postergado en la primera versión (P9)" (D20), así que llega directo a la bandeja del oficial.
+
+**Escenario de la demo (D21):** Laura (`laura.mejia@demo.finantech.co`, CC terminada en 6782) tiene perfil medio en la central simulada (mora máxima 30 días, 3 obligaciones, 3 consultas, deuda de 5 veces el ingreso). Para que caiga entre 500 y 699 y pase por Camila (oficial, atribución de 30 millones): declarar **antigüedad laboral menor a 12 meses** (por ejemplo, 6) y una **cuota entre el 20 % y el 30 % del ingreso disponible** (por ejemplo, libre inversión de 5.000.000 a 24 meses con ingreso de 1.100.000 y egreso 0). Puntaje: 600 + 30 + 60 + 0 − 30 = 660, versión R-2026.10-1. Con antigüedad de 24 meses o más y cuota de hasta el 20 % se aprueba sola. La evaluación sale con `fuente_central: simulada` y cada consulta queda en la auditoría con `modo_simulado` (MR-003). Lo cubre `tests/Feature/Evaluacion/DecisionOficialTest.php` ("D21").
 
 ### Administración
 

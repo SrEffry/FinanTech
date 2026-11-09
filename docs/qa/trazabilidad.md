@@ -1,6 +1,6 @@
 # Matriz de trazabilidad — primera versión
 
-Mantiene: **qa-senior**. Corte: 02/11/2026. Fuentes: ERS (punto 7 requisitos, puntos 11 a 15 plan de pruebas), `docs/correcciones-ers-v1.1.md` y `docs/contrato-api-v1-frontend.md`.
+Mantiene: **qa-senior**. Corte: 07/11/2026 (P9). Fuentes: ERS (punto 7 requisitos, puntos 11 a 15 plan de pruebas), `docs/correcciones-ers-v1.1.md` y `docs/contrato-api-v1-frontend.md`.
 
 Cadena: **requisito → caso CP del plan (14.x) → prueba automatizada → estado**. Los 48 casos que no son del camino crítico (11.3) se cubren con las pruebas Pest de cada requisito.
 
@@ -33,10 +33,12 @@ Pruebas que cita la matriz (todas en `backend/tests/` salvo las de Vitest):
 | ESQ | `Feature/Infraestructura/EsquemaTest.php` | qa-senior |
 | SREG | `Feature/Seguridad/RegistroSeguridadTest.php` | qa-senior |
 | SSES | `Feature/Seguridad/SesionSeguridadTest.php` | qa-senior |
-| CCM | `Feature/Evaluacion/CasosCriticosMotorTest.php` (RN-43 activas; CP0013 y CP0014 en `todo()` hasta T10) | qa-senior |
+| CCM | `Feature/Evaluacion/CasosCriticosMotorTest.php` (RN-43 activas; revisión del catálogo; 3 `todo()` de CP0014: pasos 4-6 por HTTP, reversión y panel) | qa-senior |
 | NEU | `Feature/Identidad/RegistroNeutroTest.php` (P3, T30) | backend-senior |
 | SNEU | `Feature/Seguridad/RegistroNeutroSeguridadTest.php` (T32: log, cabeceras y señuelo frente a código equivocado) | qa-senior |
-| CI | `.github/workflows/ci.yml` (GitHub Actions: Pest con cobertura, `--group=arch`, motor ≥ 95 %; lint, Vitest y build del portal) | qa-senior |
+| CI | `.github/workflows/ci.yml` (GitHub Actions: Pest con cobertura, `--group=arch`, motor ≥ 95 %; lint, Vitest y build del portal). **Primera corrida en GitHub: verde** (`2f5e1b2`, rama `feature`, 08/11: backend 72 s, portal 77 s) | qa-senior |
+| REC | `Feature/Recorrido/FlujoVitalP9Test.php` (P9: flujo vital por HTTP con cookies reales y segundo factor; 2 pruebas, 77 aserciones: hasta la evaluación automática, y D21 → bandeja → decisión → oferta → pagaré firmado) | qa-senior |
+| V6 | `docs/qa/e2e/recorrido-p9.mjs` (recorrido en el navegador contra Laravel sin MSW; 9 pasos con OK, FALLA o PENDIENTE y evidencias. **9/9 el 09/11** contra :5173 por el escenario D21, puntaje 660) | qa-senior |
 | VIT | `frontend/src/**/*.test.ts(x)` (Vitest) | frontend-senior |
 
 > Las pruebas de Vitest sobre `frontend/src/mocks/` (motor, cálculos) verifican la **lógica de referencia** del portal, no el backend. No cuentan como cobertura de un requisito hasta que la regla viva en Laravel.
@@ -58,11 +60,13 @@ Criterio de aprobación (12.3 con la corrección F1): **13 de 14 exitosos y CP00
 | CP0009 Bloqueo y mensaje genérico | RN-12, RN-17 | SES "CP0009" (7: mismo cuerpo y misma latencia, bloqueo 30 min, contador para correos inexistentes, auditoría), recuperación (3); SSES (límite por origen) | **Cubierto** | D-02 corregido: la contraseña probada ya no llega al log (SSES). |
 | CP0010 Auditoría inmutable (crítico) | RNF-08 | INM "CP0010" (4); ESQ (triggers en **toda** tabla con `SoloAdicion`: hoy 6 tablas); SES (inicios y fallos); CYV (llamadas a proveedores); SOL (transición rechazada auditada, historial de estados de solo adición) | **Parcial** | Eventos que faltan: decisiones (T15), parametrización (T22), exportaciones (T22), accesos a datos de terceros (consola, T17). Consulta filtrable por usuario, fecha y entidad (T22). |
 | CP0011 Simulación transparente (crítico) | RF-05, RN-23, RN-24, RN-25, RNF-20 | SIM "CP0011" (7) y rangos (5); PAR (7); VIT `componentes.test.tsx` (TEA junto a la cuota con el mismo peso) | **En desarrollo** (T03) | Validar con la entrega de T03: contraste con hoja de cálculo independiente, aviso "no constituye aprobación" en pantalla, plan descargable, recálculo < 1 s. |
-| CP0012 Radicación | RF-06, RN-28, RN-29, RN-30, RN-32, RN-33 | SOL (27: borrador, RN-28 también en la base, radicado `FT-AAAA-NNNNNN` sin repetir en concurrencia, RN-32, RN-33, evento `SolicitudRadicada`); MAQ (5); DIR (4); VIT `validarArchivo` | **Parcial** (T04 en servicio) | Endpoints HTTP, documentos JPG/PNG/PDF de hasta 10 MB validados en el servidor (RN-30), borrador y reanudación: T11. |
-| CP0013 Evaluación trazable | RF-08, RN-40, RN-41, RN-44, RN-46 | CCM "CP0013" (14 `todo()`, uno por paso y por regla: bandas, límites exactos 700/699/500/499, RN-41, `version_reglas` y variables determinantes, solo adición, < 10 min, reejecución, central caída → manual, auditoría simulada, RN-19, 401/403); PAR; VIT (solo referencia) | **Sin prueba** (preparado) | T10 (motor). Las `todo()` pasan a pruebas reales en cuanto backend publique el motor; `phpunit.motor.xml` y la CI exigen el 95 % (RNF-12). |
-| CP0014 Equidad del modelo (crítico) | RN-43, RNF-25 | CCM "RN-43" (3 activas: ninguna columna sensible en `evaluacion_`, `originacion_` y `cliente_`; ningún identificador sensible en el código de Evaluacion; prueba del detector) y "CP0014" (7 `todo()`: catálogo sin sensibles ni aproximaciones, justificación por variable, variables determinantes dentro del catálogo, tres pares, reversión) | **Parcial** (guardas de RN-43) | T10 (catálogo de variables y pares sintéticos), T15 (reversión humana, paso 9). Panel de equidad fuera (F2): pasos 7 y 8 no aplican. |
+| CP0012 Radicación | RF-06, RN-28, RN-29, RN-30, RN-32, RN-33 | SOL; MAQ; DIR; HTTP de T11 (`SolicitudesClienteHttpTest`: 401/403, RN-35, borrador, documentos RN-30, radicación); REC (de punta a punta: RN-07, borrador, documentos, radicado `FT-AAAA-NNNNNN`); VIT `validarArchivo`; V6 pasos 5-6 | **Cubierto** (API y navegador) | V6 radica en el navegador con PDF sintéticos mínimos y radicado `FT-AAAA-NNNNNN`. |
+| CP0013 Evaluación trazable | RF-08, RN-40, RN-41, RN-44, RN-46 | Pruebas de T10 de backend (`Unit/Evaluacion/MotorReglasTest`, `Feature/Evaluacion/EvaluacionAutomaticaTest`: pasos 1 a 8, límites 700/699/500/499, RN-41, solo adición, central caída → manual, RN-19, modo real, 401/403/404); REC (radicar → evaluación → estado coherente con RN-40 y `version_reglas`); CCM (2 `todo()` de punta a punta por HTTP); REC (de punta a punta por HTTP: el cliente radica, el motor evalúa y el analista consulta la evaluación con `version_reglas`); V6 paso 8 | **Cubierto** (API y navegador) | V6 exige en la pantalla del oficial la versión de reglas y el distintivo de central simulada, y puntaje 660 en la respuesta (D21). |
+| CP0014 Equidad del modelo (crítico) | RN-43, RNF-25 | CCM "RN-43" (3: esquema, identificadores de Evaluacion, detector) y "catálogo" (3: revisión independiente del catálogo de T10, prohibidas completas, ninguna prohibida admitida); T10 de backend (catálogo con justificación, reglas solo del catálogo, entrada sin atributos prohibidos, tres pares: nombre, edad, apellidos) | **En desarrollo (T10)** | Paso 9 (reversión humana de una decisión automatizada) en `todo()`: falta confirmar con backend si T15 permite decidir sobre una solicitud que ya decidió el motor. Pasos 4-6 por HTTP en `todo()` (cubiertos por servicio en T10). Pasos 7 y 8 (panel) fuera (F2). |
 
-**Resumen hoy (02/11):** 5 cubiertos (CP0001, CP0004, CP0005, CP0008, CP0009), 4 parciales (CP0002, CP0010, CP0012, CP0014), 4 en desarrollo (CP0003, CP0006, CP0007, CP0011) y 1 sin prueba (CP0013, con los pasos preparados en `todo()`). De los 4 críticos (CP0006, CP0010, CP0011, CP0014) ninguno está cerrado todavía. CP0014 ya tiene las guardas de RN-43; le faltan el catálogo, los pares y la reversión (T10, T15). CP0005 se vuelve a validar con la respuesta neutra de P3 (T30 y T32).
+**Resumen al 09/11:** suite completa en `finantech_test_qa`: 368 pruebas en verde y 3 `todo()` (2516 aserciones). Flujo vital P9 de punta a punta en verde por la API (REC) y en el navegador sin MSW (V6, 9/9). CP0014 sigue parcial por los `todo()` de arriba. Quedan fuera de esta medición las pantallas sin recorrido automatizado (por ejemplo, expediente completo y negación).
+
+**Resumen del 02/11 (histórico):** 5 cubiertos (CP0001, CP0004, CP0005, CP0008, CP0009), 4 parciales (CP0002, CP0010, CP0012, CP0014), 4 en desarrollo (CP0003, CP0006, CP0007, CP0011) y 1 sin prueba (CP0013, con los pasos preparados en `todo()`). De los 4 críticos (CP0006, CP0010, CP0011, CP0014) ninguno está cerrado todavía. CP0014 ya tiene las guardas de RN-43; le faltan el catálogo, los pares y la reversión (T10, T15). CP0005 se vuelve a validar con la respuesta neutra de P3 (T30 y T32).
 
 Última ejecución (02/11), clon limpio de `HEAD` más los archivos de QA de esta ronda, sobre `finantech_test_qa`: **201 pruebas en verde y 21 `todo`, arquitectura 9/9, cobertura 96,2 % global y 100 % en el motor** (secciones 5 y 6). Portal en Node 22: **lint, 59 pruebas de Vitest y build en verde** sobre `HEAD`. La copia de trabajo de los demás agentes (T11, T28 y T30 en curso) no se midió.
 
@@ -106,24 +110,24 @@ Las pruebas de los defectos D-01 a D-04 llevan `->group('defectos')` y quedan co
 | RF-05, RN-23, RN-24, RN-26 | CP0011 | SIM; PAR | En desarrollo (T03) | |
 | RN-25 aviso "no constituye aprobación" | CP0011 | — | Sin prueba | Es de interfaz: prueba de Vitest o verificación manual. |
 | RNF-20 TEA junto a la cuota, mismo peso | CP0011 | VIT `CuotaConTea` | Cubierto (componente) | Verificar en todas las pantallas que muestran cuota (simulación, oferta). |
-| RF-06, RN-28, RN-29, RN-32, RN-33 | CP0012 | SOL; MAQ; DIR | Parcial (servicio) | Endpoints HTTP en T11. |
+| RF-06, RN-28, RN-29, RN-32, RN-33 | CP0012 | SOL; MAQ; DIR; HTTP de T11; REC; V6 | **Cubierto** (API y navegador) | T11 entregado. |
 | RN-30 formatos y 10 MB | CP0012 | VIT `validarArchivo` (solo portal); CYV (capturas JPG/PNG) | Parcial | Falta validar los documentos de la solicitud en el servidor (T11). |
 | RN-31 borrador se elimina a los 30 días | — | — | Sin prueba (T11) | |
-| RF-07, RN-34 a RN-37 | — | MAQ y SOL "cambios de estado" (máquina E3, motivo y actor); VIT `estados.test.ts` (RN-36) | Parcial | Seguimiento del cliente por HTTP (T11). RN-35 "solo ve sus solicitudes": prueba de 403/404 cruzado en T14. |
+| RF-07, RN-34 a RN-37 | — | MAQ y SOL "cambios de estado" (máquina E3, motivo y actor); VIT `estados.test.ts` (RN-36); `SolicitudesClienteHttpTest`; REC; V6 | **Cubierto** (API y navegador) | Seguimiento y enlace a la oferta por HTTP y en el navegador. |
 
 ### Evaluación y decisión (RF-08 a RF-10)
 
 | Requisito | CP | Prueba | Estado | Nota |
 |---|---|---|---|---|
-| RF-08, RN-39 a RN-46 | CP0013, CP0014 | PAR (versión de parámetros, solo adición); CCM (RN-43 activas, resto en `todo()`) | Sin prueba (T10) | Cobertura exigida: 95 %, medida con `phpunit.motor.xml` en la CI (RNF-12). |
+| RF-08, RN-39 a RN-46 | CP0013, CP0014 | PAR (versión de parámetros, solo adición); CCM (RN-43 y catálogo); pruebas de T10; REC; V6 | **Cubierto** (API y navegador) | Motor al 99,6 % en la medición del gerente (08/11; exigido 95 %, RNF-12). |
 | RF-09, RN-47 a RN-52 | — | — | Sin prueba (T16, T23) | |
-| RF-10, RN-53 a RN-58 | CP0014 (reversión) | — | Sin prueba (T15) | Segregación (RN-56) y conflicto de interés (RN-55) en T20. |
+| RF-10, RN-53 a RN-58 | CP0014 (reversión) | `Feature/Evaluacion/DecisionOficialTest` (backend: RN-53 a RN-58, 401/403); REC; V6 paso 8 | **Cubierto** (API y navegador) | Atribución, conflicto, segregación, motivo, tasa máxima y solo adición en las pruebas de backend. CP0014 paso 9 sigue en `todo()`. |
 
 ### Formalización (RF-11)
 
 | Requisito | CP | Prueba | Estado | Nota |
 |---|---|---|---|---|
-| RF-11, RN-59 a RN-62 | PRU-MR004-01 | — | Sin prueba (T18) | Firma con adaptador simulado y distintivo (MR-004). |
+| RF-11, RN-59 a RN-62 | PRU-MR004-01 | `Feature/Desembolso/OfertasTest` (fullstack: emisión, 401/403/404, segundo factor, firma, vencimiento, rechazo); REC; V6 paso 9 | **Cubierto** (API y navegador) | Firma con adaptador simulado y distintivo visible en el pagaré (MR-004). |
 
 ### Fuera de la primera versión
 
@@ -161,6 +165,9 @@ Los cuatro defectos de la ronda 1 fueron **corregidos por backend-senior y verif
 | D-05 | **Alta** (bloqueaba la CI) | qa-senior | `phpunit.xml` declara la suite `tests/Unit`, pero la carpeta está vacía y git no la guarda. En un clon limpio (CI), Pest se detiene con `Test directory "tests/Unit" not found` y **no corre ninguna prueba**. En las copias locales no se ve porque la carpeta existe. Encontrado al reproducir el workflow con `git archive HEAD`. | Reproducción de CI | **Corregido (02/11):** `backend/tests/Unit/.gitkeep`. Las personas deben incluirlo en el commit de T31. |
 | O-04 | Baja (riesgo residual, para decidir) | gerente-proyecto | Con P3 queda un canal inevitable. Quien escribe **un documento ajeno con su propio correo** recibe en su bandeja `RegistroNoDisponibleMail` en lugar de un código, y con eso sabe que esa cédula ya tiene cuenta. El cuerpo de la API es neutro, pero el correo no puede serlo: mandar un código falso lo delataría al verificar. Mitigaciones que ya existen: límite de 10 registros por minuto por origen (SREG) y 3 avisos por hora al titular (NEU). Hoy la enumeración masiva de cédulas cuesta como mínimo un correo por intento y queda en la auditoría. | NEU "con un documento repetido…" | Abierta: aceptar el riesgo residual y anotarlo en la ERS v1.1 (CP0005), o pedir un límite por documento. |
 | O-03 | Baja | qa-senior | Las pruebas escribían en `storage/logs/laravel.log` de desarrollo (`testing.ERROR`). **Corregido (D7):** `<env name="LOG_CHANNEL" value="null"/>` en `phpunit.xml`. Las pruebas de logs siguen funcionando porque escuchan el evento `MessageLogged`. | — | Corregida (D7) |
+| O-05 | Alta (ya no bloquea) | gerente-proyecto (entorno) | El 07/11 la API de desarrollo tarda entre 35 y 70 s por petición, incluso `GET sistema/estado`, y nginx corta a los 60 s con **504** (`upstream timed out`). Los estáticos responden en 0,1 s. Dentro del contenedor, `php -r 'echo 1;'` por `docker exec` tarda 12 s y cargar `vendor/autoload.php` tarda 16 s. **El equipo anfitrión está al 100 % de CPU**, con 2,6 GB libres de 16 GB. El proceso que más consume se llama `7dsgc.exe` (PID 7724, 9321 s de CPU, 1,7 GB, iniciado el 07/11 a las 21:55); Windows no deja ver su ruta. No es de PagaMas y QA no lo tocó. | **Cerrada para P9 (09/11):** `7dsgc.exe` ya no corre según el gerente (08/11) y la API responde en 0,5 a 3 s. V6 completó 9/9. D24 (`vendor` en volumen con nombre) está aplicada en el entorno: existe el volumen `pagamas_vendor-data`; la ventana la manejó otra persona o agente, no QA. | Abierta y escalada a Efren: `7dsgc.exe` sigue arriba y **reapareció con otro PID (13208) el 08/11**. El 08/11 la API responde en 12 a 46 s, sin 504. **D24 (mejora de entorno): escrita y SIN aplicar:** volumen `vendor-data` en `docker-compose.yml`, `opcache.revalidate_freq = 10` en `docker/php/php.ini` y el `composer install` posterior en el `README.md`. Rige cuando el gerente anuncie la ventana para recrear contenedores (con T30, T33, T10 y T11 aprobadas). |
+| O-06 | Baja (texto, para decidir) | ux-ui-senior | El simulador del portal dice "Esta simulación no es una aprobación"; la radicación dice "no constituye aprobación", que es la fórmula de CLAUDE.md y CP0011. El sentido es el mismo. | V6 paso 4 (acepta ambas redacciones) | Abierta: decidir si se unifica el texto. |
+| O-07 | Baja (entorno) | gerente-proyecto | En la raíz del repositorio hay un `node_modules/` sin ignorar, solo con cachés `.vite` y `.vitest-cache` (67 archivos) del 02/11 a las 12:30. No salió de V6 ni de QA: no hay corrida de vitest de QA a esa hora. | `git status` | Abierta: no se borró porque la instrucción era borrarlo solo si venía del recorrido. Lo decide el gerente. |
 
 ## 5. Cobertura (RNF-12)
 
