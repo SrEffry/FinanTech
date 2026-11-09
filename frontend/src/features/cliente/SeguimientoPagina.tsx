@@ -57,13 +57,29 @@ export default function SeguimientoPagina() {
         acciones={<EstadoBadge estado={s.estado} />}
       />
 
-      {accion && accion.tipo !== 'documentos' ? (
-        <Alert
-          tono={accion.tipo === 'decision' ? 'info' : 'exito'}
-          titulo={accion.texto}
-          accion={<ButtonLink to={rutaAccion(s, accion)} tamano="sm">{accion.tipo === 'oferta' ? 'Revisar oferta' : 'Ver explicación'}</ButtonLink>}
-        />
-      ) : null}
+      {/* El estado en grande, con lo que sigue (RN-36: etiqueta para el cliente). */}
+      <section
+        aria-label="Estado de tu solicitud"
+        className="sobre-oscuro trama-trenza -mx-4 flex flex-col gap-5 bg-noche px-5 py-6 text-white sm:mx-0 sm:rounded-lienzo sm:px-8 sm:py-7 sm:shadow-elevada lg:flex-row lg:items-center lg:justify-between"
+      >
+        <div className="flex flex-col gap-1.5" aria-live="polite">
+          <p className="text-sm text-niebla">Estado de tu solicitud</p>
+          <p className="titular text-[clamp(1.5rem,5vw,2rem)] leading-tight font-semibold">{ETIQUETA_CLIENTE[s.estado]}</p>
+          {evaluando ? (
+            <p className="flex items-center gap-2 text-niebla">
+              <RefreshCw aria-hidden="true" className="size-4 animate-spin motion-reduce:animate-none" />
+              Estamos evaluando tu solicitud. Suele tardar unos minutos y esta página se actualiza sola.
+            </p>
+          ) : accion && accion.tipo !== 'documentos' ? (
+            <p className="text-niebla">{accion.texto}</p>
+          ) : null}
+        </div>
+        {accion && accion.tipo !== 'documentos' ? (
+          <ButtonLink to={rutaAccion(s, accion)} variante="acento" tamano="lg" className="self-start lg:self-auto">
+            {accion.tipo === 'oferta' ? 'Revisar oferta' : 'Ver explicación'}
+          </ButtonLink>
+        ) : null}
+      </section>
 
       {s.estado === 'PENDIENTE_CLIENTE' ? (
         <Panel variante="destacado" titulo="Necesitamos que vuelvas a cargar un documento" descripcion="Cuando lo cargues, envíalo para que sigamos con el estudio.">
@@ -82,15 +98,6 @@ export default function SeguimientoPagina() {
         </Panel>
       ) : null}
 
-      {evaluando ? (
-        <Alert tono="info" titulo="Estamos evaluando tu solicitud">
-          <span className="flex items-center gap-2">
-            <RefreshCw aria-hidden="true" className="size-4 animate-spin" />
-            Suele tardar unos minutos. Esta página se actualiza sola.
-          </span>
-        </Alert>
-      ) : null}
-
       <Panel titulo="Etapas">
         <LineaEtapas historial={s.historial} estado={s.estado} />
       </Panel>
@@ -98,8 +105,8 @@ export default function SeguimientoPagina() {
       <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
         <Panel titulo="Lo que pediste">
           <div className="flex flex-col gap-5">
-            <p className="text-tinta-suave">
-              <Dinero valor={s.monto} className="font-semibold text-tinta" /> a {s.plazo_meses} meses
+            <p className="flex items-baseline gap-2 text-tinta-suave">
+              <Dinero valor={s.monto} className="cifras text-xl font-semibold tracking-tight text-noche" /> a {s.plazo_meses} meses
             </p>
             <CuotaConTea cuota={s.cuota_estimada} tea={s.tasa_ea} tamano="mediano" etiquetaCuota="Cuota estimada" />
             <p className="text-sm text-tinta-tenue">
