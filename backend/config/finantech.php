@@ -16,6 +16,9 @@ return [
         'max_intentos_codigo' => 5,
         'espera_reenvio_segundos' => 60,        // RF-01 FA-02
         'max_reenvios_por_hora' => 3,           // RF-01 FA-02
+        // P3 / RN-17 / CP0005: iniciar el registro tarda al menos esto, haya o no una cuenta
+        // con el documento o el correo, para que la latencia no lo revele.
+        'tiempo_minimo_respuesta_ms' => (int) env('REGISTRO_TIEMPO_MINIMO_MS', 500),
     ],
 
     // RF-03, RI-08: inicio de sesión con segundo factor y cookies httpOnly.
@@ -46,6 +49,12 @@ return [
         'espera_reenvio_segundos' => 60,
         'max_intentos' => 5,
         'max_reenvios' => 3,
+    ],
+
+    // SMS simulado (no hay proveedor contratado): además del log, deja una copia en la bandeja
+    // de desarrollo (Mailpit). Nunca en producción. Vacío = solo el log.
+    'sms_simulado' => [
+        'buzon' => env('SMS_SIMULADO_BUZON', 'sms-simulado@finantech.test'),
     ],
 
     'recuperacion' => [

@@ -75,9 +75,10 @@ describe('CP0005 / RN-17 — el registro no permite distinguir qué dato ya exis
         $porDocumento = $this->postJson('/api/v1/clientes/registro', DatosPrueba::registro(['email' => 'otra@example.com']));
         $porCorreo = $this->postJson('/api/v1/clientes/registro', DatosPrueba::registro(['num_documento' => '1099999999']));
 
-        expect($porDocumento->status())->toBe(409)
+        // P3 (01/11): la respuesta es la de un registro nuevo (201); solo cambian el id y las horas.
+        expect($porDocumento->status())->toBe(201)
             ->and($porCorreo->status())->toBe($porDocumento->status())
-            ->and($porCorreo->json())->toBe($porDocumento->json());
+            ->and(array_keys($porCorreo->json()))->toBe(array_keys($porDocumento->json()));
     });
 
     it('compara el correo sin distinguir mayúsculas (RN-02)', function () {
@@ -85,9 +86,10 @@ describe('CP0005 / RN-17 — el registro no permite distinguir qué dato ya exis
 
         $this->postJson('/api/v1/clientes/registro', DatosPrueba::registro([
             'num_documento' => '1099999999', 'email' => 'MARIA.Perez@Example.COM',
-        ]))->assertStatus(409)->assertJson(['codigo' => 'cuenta_existente']);
+        ]))->assertCreated(); // P3: neutro
 
         expect(Usuario::count())->toBe(1);
+        Mail::assertSent(\App\Modules\Identidad\Mail\AvisoIntentoRegistroMail::class, fn ($m) => $m->hasTo('maria.perez@example.com'));
     });
 
     it('normaliza el documento antes de comparar (RN-01)', function () {
@@ -95,7 +97,9 @@ describe('CP0005 / RN-17 — el registro no permite distinguir qué dato ya exis
 
         $this->postJson('/api/v1/clientes/registro', DatosPrueba::registro([
             'tipo_documento' => 'PA', 'num_documento' => 'ab12345', 'email' => 'otra@example.com',
-        ]))->assertStatus(409);
+        ]))->assertCreated(); // P3: neutro; el titular recibe el aviso
+
+        Mail::assertSent(\App\Modules\Identidad\Mail\AvisoIntentoRegistroMail::class);
 
         expect(Cliente::count())->toBe(1);
     });
@@ -104,7 +108,7 @@ describe('CP0005 / RN-17 — el registro no permite distinguir qué dato ya exis
         qaRegistrarCliente($this);
 
         $respuesta = $this->postJson('/api/v1/clientes/registro', DatosPrueba::registro(['email' => 'otra@example.com']))
-            ->assertStatus(409);
+            ->assertCreated(); // P3: neutro
 
         $rechazo = RegistroAuditoria::where('resultado', 'rechazo')->sole();
         $texto = $respuesta->getContent().json_encode($rechazo->detalle);

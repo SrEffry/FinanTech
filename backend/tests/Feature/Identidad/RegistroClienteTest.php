@@ -118,7 +118,8 @@ describe('CP0004 — registro y vinculación del cliente (RF-01)', function () {
 });
 
 describe('CP0005 — validaciones de registro (RN-01, RN-03)', function () {
-    it('rechaza un documento ya registrado sin revelar datos de la cuenta', function () {
+    // P3 / RN-17: el duplicado responde como un registro nuevo; el detalle está en RegistroNeutroTest.
+    it('no crea una segunda cuenta con un documento ya registrado ni revela datos de la cuenta', function () {
         $inicio = $this->postJson('/api/v1/clientes/registro', datosRegistro());
         $this->postJson("/api/v1/clientes/registro/{$inicio['registro_id']}/verificar", [
             'codigo_email' => codigoCorreoEnviado(),
@@ -126,14 +127,14 @@ describe('CP0005 — validaciones de registro (RN-01, RN-03)', function () {
         ]);
 
         $respuesta = $this->postJson('/api/v1/clientes/registro', datosRegistro(['email' => 'otra@example.com']))
-            ->assertStatus(409)
-            ->assertJson(['codigo' => 'cuenta_existente']);
+            ->assertCreated()
+            ->assertJsonStructure(['registro_id', 'codigos_expiran_en', 'reenvio_disponible_en']);
 
         expect($respuesta->getContent())->not->toContain('maria.perez')->not->toContain('María');
-        expect(Cliente::count())->toBe(1)->and(RegistroPendiente::count())->toBe(0);
+        expect(Cliente::count())->toBe(1);
     });
 
-    it('rechaza un correo ya registrado con el mismo mensaje', function () {
+    it('no crea una segunda cuenta con un correo ya registrado', function () {
         $inicio = $this->postJson('/api/v1/clientes/registro', datosRegistro());
         $this->postJson("/api/v1/clientes/registro/{$inicio['registro_id']}/verificar", [
             'codigo_email' => codigoCorreoEnviado(),
@@ -141,8 +142,10 @@ describe('CP0005 — validaciones de registro (RN-01, RN-03)', function () {
         ]);
 
         $this->postJson('/api/v1/clientes/registro', datosRegistro(['num_documento' => '1099999999']))
-            ->assertStatus(409)
-            ->assertJson(['codigo' => 'cuenta_existente']);
+            ->assertCreated()
+            ->assertJsonMissing(['codigo' => 'cuenta_existente']);
+
+        expect(Usuario::count())->toBe(1);
     });
 
     it('rechaza a un menor de 18 años sin crear registros', function () {

@@ -43,6 +43,7 @@ class IdentidadServiceProvider extends ModuleServiceProvider
         // `rol`) se registra en bootstrap/app.php, que es donde el kernel HTTP lo lee.
 
         // Límites por IP; el bloqueo por cuenta (RN-12) es aparte y no depende de la IP.
+        RateLimiter::for('identidad-registro', fn (Request $request) => Limit::perMinute(10)->by('registro|'.$request->ip()));
         RateLimiter::for('identidad-sesion', fn (Request $request) => Limit::perMinute(30)->by('sesion|'.$request->ip()));
         RateLimiter::for('identidad-verificacion', fn (Request $request) => Limit::perMinute(10)->by('verificacion|'.$request->ip()));
         RateLimiter::for('identidad-recuperacion',fn (Request $request) => Limit::perMinute(5)->by('recuperacion|'.$request->ip()));

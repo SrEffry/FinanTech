@@ -12,8 +12,8 @@ Route::get('sistema/estado', [SistemaController::class, 'estado']);
 
 Route::get('identidad/politica-vigente', [RegistroClienteController::class, 'politicaVigente']);
 
-// RF-01
-Route::middleware('throttle:10,1')->group(function () {
+// RF-01 (RNF-07): límite por IP con contador propio, que no comparte con otras rutas (D8)
+Route::middleware('throttle:identidad-registro')->group(function () {
     Route::post('clientes/registro', [RegistroClienteController::class, 'iniciar']);
     Route::post('clientes/registro/{registro}/reenviar', [RegistroClienteController::class, 'reenviar']);
     Route::post('clientes/registro/{registro}/verificar', [RegistroClienteController::class, 'verificar']);
