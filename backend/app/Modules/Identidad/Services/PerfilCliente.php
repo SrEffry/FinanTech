@@ -4,6 +4,7 @@ namespace App\Modules\Identidad\Services;
 
 use App\Modules\Identidad\Models\Cliente;
 use App\Modules\Identidad\Models\Consentimiento;
+use App\Modules\Identidad\Models\VinculoCliente;
 use App\Shared\Exceptions\ErrorNegocio;
 
 /**
@@ -59,10 +60,40 @@ class PerfilCliente
         ];
     }
 
+    /**
+     * Documento completo, solo para consultar a la central de riesgo (RF-08 paso 2) con la
+     * autorización del titular (RN-33). Nunca se muestra, se guarda ni se registra en el log
+     * fuera de Identidad (RNF-06).
+     *
+     * @return array{tipo: string, numero: string}|null
+     */
+    public function documentoParaCentrales(int $clienteId): ?array
+    {
+        $cliente = Cliente::find($clienteId, ['id', 'tipo_documento', 'num_documento']);
+
+        return $cliente ? ['tipo' => $cliente->tipo_documento, 'numero' => $cliente->num_documento] : null;
+    }
+
+    /** Desde cuándo es cliente (RF-08 paso 3), sin ningún otro dato personal (RN-43). */
+    public function clienteDesde(int $clienteId): ?string
+    {
+        return Cliente::find($clienteId, ['id', 'created_at'])?->created_at?->toIso8601String();
+    }
+
     /** Id del usuario (credencial) del cliente, para auditoría y notificaciones. */
     public function usuarioId(int $clienteId): ?int
     {
         return Cliente::whereKey($clienteId)->value('usuario_id');
+    }
+
+    /**
+     * RN-55: ¿el usuario es el propio cliente o declaró un vínculo con él? Si es así, no puede
+     * decidir sus solicitudes. No dice cuál es el vínculo.
+     */
+    public function tieneVinculo(int $usuarioId, int $clienteId): bool
+    {
+        return $this->usuarioId($clienteId) === $usuarioId
+            || VinculoCliente::where('usuario_id', $usuarioId)->where('cliente_id', $clienteId)->exists();
     }
 
     /**

@@ -65,6 +65,19 @@ class ParametrosVigentes
         return null;
     }
 
+    /**
+     * Una versión publicada por su código, vigente o no: el motor evalúa con la versión que
+     * tenía la solicitud al crearse (RN-44), aunque después se haya publicado otra.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function porVersion(string $version): ?array
+    {
+        $fila = VersionParametros::where('version', $version)->first();
+
+        return $fila ? $this->formatear($fila) : null;
+    }
+
     private function leer(CarbonInterface $momento): array
     {
         $version = VersionParametros::where('vigente_desde', '<=', $momento)
@@ -72,6 +85,11 @@ class ParametrosVigentes
             ->orderByDesc('id')
             ->first();
 
+        return $this->formatear($version);
+    }
+
+    private function formatear(?VersionParametros $version): array
+    {
         if (! $version) {
             throw new ErrorNegocio(
                 'parametros_no_disponibles',
