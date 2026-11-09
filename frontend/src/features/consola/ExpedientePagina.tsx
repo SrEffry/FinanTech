@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router'
 import { agregarObservacion, emitirConcepto, obtenerExpediente, pedirDocumentos } from '../../lib/api/consola'
 import type { Concepto, Expediente } from '../../lib/api/tipos'
 import { mensajeDe } from '../../lib/errores'
+import { POSTERGADAS_ACTIVAS } from '../../lib/primeraVersion'
 import { formatoFechaHora, formatoMoneda } from '../../lib/formato'
 import { Button, ButtonLink } from '../../components/ui/Button'
 import { Checkbox } from '../../components/ui/Choice'
@@ -42,7 +43,7 @@ export default function ExpedientePagina() {
     <div>
       <EncabezadoPagina
         titulo={`Expediente ${s.radicado}`}
-        descripcion={`${s.producto.nombre} por ${formatoMoneda(s.monto)} a ${s.plazo_meses} meses. Analista: ${x.analista ?? 'sin asignar'}.`}
+        descripcion={`${s.producto.nombre} por ${formatoMoneda(s.monto)} a ${s.plazo_meses} meses.${POSTERGADAS_ACTIVAS ? ` Analista: ${x.analista ?? 'sin asignar'}.` : ''}`}
         migas={[{ etiqueta: 'Bandeja', a: bandeja }, { etiqueta: s.radicado ?? 'Expediente' }]}
         acciones={<EstadoBadge estado={s.estado} interno />}
       />
@@ -134,6 +135,11 @@ function AccionesAnalista({ expediente }: { expediente: Expediente }) {
         </Alert>
       </>
     )
+  }
+
+  // P9, D20 y D22: el concepto del analista queda para una próxima versión; el caso sigue directo al oficial.
+  if (!POSTERGADAS_ACTIVAS) {
+    return <Alert tono="info">El concepto del analista no está disponible en esta versión. La solicitud sigue directo a la decisión del oficial.</Alert>
   }
 
   return (

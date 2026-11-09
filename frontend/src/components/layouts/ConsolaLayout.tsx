@@ -2,14 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet } from 'react-router'
 import {
   ClipboardList,
-  FileSearch,
   Gauge,
   House,
   LogOut,
   Menu,
-  ScrollText,
-  SlidersHorizontal,
-  Users,
   X,
   type LucideIcon,
 } from 'lucide-react'
@@ -32,20 +28,14 @@ const MODULOS: Record<Exclude<Rol, 'cliente'>, Modulo[]> = {
   analista: [{ a: '/consola/analista', etiqueta: 'Bandeja de estudio', icono: ClipboardList }],
   oficial: [
     { a: '/consola/oficial', etiqueta: 'Bandeja de decisiones', icono: Gauge },
-    { a: '/consola/auditoria', etiqueta: 'Mi actividad', icono: ScrollText },
   ],
-  administrador: [
-    { a: '/consola/admin/usuarios', etiqueta: 'Usuarios y roles', icono: Users },
-    { a: '/consola/admin/parametros', etiqueta: 'Parámetros', icono: SlidersHorizontal },
-    { a: '/consola/admin/auditoria', etiqueta: 'Auditoría', icono: FileSearch },
-  ],
+  // P9, D22: administración y auditoría quedan para una próxima versión.
+  administrador: [],
   contabilidad: [
     { a: '/consola/contabilidad', etiqueta: 'Inicio', icono: House },
-    { a: '/consola/auditoria', etiqueta: 'Mi actividad', icono: ScrollText },
   ],
   directivo: [
     { a: '/consola/directivo', etiqueta: 'Inicio', icono: House },
-    { a: '/consola/auditoria', etiqueta: 'Auditoría', icono: FileSearch },
   ],
 }
 

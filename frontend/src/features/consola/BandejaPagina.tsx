@@ -5,6 +5,7 @@ import { obtenerBandeja } from '../../lib/api/consola'
 import { obtenerProductos } from '../../lib/api/simulacion'
 import type { FiltrosBandeja, ItemBandeja, Semaforo } from '../../lib/api/tipos'
 import { mensajeDe } from '../../lib/errores'
+import { POSTERGADAS_ACTIVAS } from '../../lib/primeraVersion'
 import { useFiltrosUrl } from '../../lib/useFiltrosUrl'
 import { antiguedad, enmascarar, formatoFechaHora, formatoMoneda } from '../../lib/formato'
 import { Button } from '../../components/ui/Button'
@@ -108,7 +109,7 @@ export default function BandejaPagina() {
         titulo={esOficial ? 'Bandeja de decisiones' : 'Bandeja de estudio'}
         descripcion={
           esOficial
-            ? `Solicitudes con concepto del analista, esperando decisión. Tu atribución: ${formatoMoneda(usuario.atribucion_monto ?? 0)}.`
+            ? `Solicitudes esperando tu decisión. Tu atribución: ${formatoMoneda(usuario.atribucion_monto ?? 0)}.`
             : 'Solicitudes asignadas a ti. Las más próximas a vencer van primero.'
         }
       />
@@ -181,7 +182,7 @@ export default function BandejaPagina() {
       ) : bandeja.isPending ? (
         <Skeleton className="h-64" />
       ) : null}
-      {esOficial ? (
+      {esOficial && POSTERGADAS_ACTIVAS ? (
         <p className="mt-3 text-sm text-tinta-tenue">
           <Badge tono="progreso">En comité</Badge> Las solicitudes en comité son solo de consulta: las decide el comité de crédito.
         </p>

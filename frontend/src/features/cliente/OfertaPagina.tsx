@@ -149,7 +149,7 @@ function VistaOferta({ oferta }: { oferta: Oferta }) {
               <dd className="font-mono text-xs break-all">{oferta.firma.huella_sha256}</dd>
             </dl>
             <p className="text-sm text-tinta-suave">
-              El desembolso a tu cuenta llega en la segunda entrega del sistema. Guarda una copia del pagaré y del plan de pagos.
+              El desembolso a tu cuenta todavía no está disponible en esta versión. Guarda una copia del pagaré y del plan de pagos.
             </p>
             <Button variante="secundario" className="no-imprimir self-start" icono={<Printer aria-hidden="true" className="size-4" />} onClick={() => window.print()}>
               Descargar o imprimir (PDF)
@@ -159,7 +159,7 @@ function VistaOferta({ oferta }: { oferta: Oferta }) {
         </Panel>
       ) : null}
 
-      <Panel titulo="Condiciones">
+      <Panel titulo="Condiciones" variante={oferta.estado === 'vigente' ? 'destacado' : undefined}>
         <div className="flex flex-col gap-6">
           <CuotaConTea cuota={oferta.cuota} tea={oferta.tasa_ea} explicar />
           <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -188,7 +188,7 @@ function VistaOferta({ oferta }: { oferta: Oferta }) {
       <Panel titulo="Pagaré" descripcion={`Versión ${oferta.pagare.version}. Léelo completo antes de firmar.`}>
         <div className="relative">
           {firmaSimulada ? (
-            <span aria-hidden="true" className="pointer-events-none absolute inset-0 flex items-center justify-center text-6xl font-bold tracking-widest text-advertencia-500/15 select-none sm:text-8xl">
+            <span aria-hidden="true" className="pointer-events-none absolute inset-0 flex items-center justify-center text-4xl font-bold tracking-widest text-advertencia-500/15 select-none sm:text-8xl">
               SIMULADO
             </span>
           ) : null}

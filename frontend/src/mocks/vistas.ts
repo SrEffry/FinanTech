@@ -113,6 +113,8 @@ export function explicacion(solicitud: SolicitudDb): ExplicacionDecision | null 
         ? (obtenerDb().ofertas.find((o) => o.id === solicitud.oferta_id)?.motivo_condicion ?? decision.motivo)
         : null,
     reconsideracion: solicitud.reconsideracion,
+    simulado: true,
+    oferta_id: solicitud.oferta_id ?? null,
     puede_reconsiderar:
       solicitud.estado === 'NEGADA' && !solicitud.reconsideracion && venceReconsideracion.getTime() > Date.now(),
     reconsideracion_vence_en: resultado === 'negada' ? venceReconsideracion.toISOString() : null,

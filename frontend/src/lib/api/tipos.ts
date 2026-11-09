@@ -336,6 +336,10 @@ export interface ExplicacionDecision {
   reconsideracion_vence_en: string | null
   radicado: string
   producto: string
+  /** MR-004 / UX-02: la evaluación usó la central simulada. */
+  simulado: boolean
+  /** UX-31: oferta emitida por esta decisión. */
+  oferta_id: string | null
 }
 
 // ── Oferta y pagaré (RF-11) ─────────────────────────────────────────────────
@@ -362,6 +366,8 @@ export interface Oferta extends CondicionesOferta {
   producto: string
   estado: EstadoOferta
   costo_total: number
+  /** Monto menos el estudio de crédito (UX-15, D6). Laravel siempre lo envía. */
+  valor_a_recibir?: number
   desglose: ConceptoCosto[]
   plan: CuotaPlan[]
   emitida_en: string

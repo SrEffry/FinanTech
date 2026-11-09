@@ -9,6 +9,7 @@ import { Alert, Badge, Panel } from '../../components/ui/Feedback'
 import { formatoTamano } from '../../lib/archivos'
 import { Skeleton } from '../../components/ui/Spinner'
 import { DistintivoSimulado } from '../../components/dominio/Distintivos'
+import { POSTERGADAS_ACTIVAS } from '../../lib/primeraVersion'
 import { EstadoBadge } from '../../components/dominio/Estado'
 import { ContribucionVariables, MedidorPuntaje } from '../../components/dominio/Evaluacion'
 import { useServiciosSimulados } from '../acceso/sesion'
@@ -182,7 +183,7 @@ export function PanelDocumentos({ expediente }: { expediente: Expediente }) {
               <p className="text-xs text-tinta-tenue">
                 {formatoTamano(documento.archivo.tamano)}, cargado el {formatoFechaHora(documento.archivo.cargado_en)}
               </p>
-              <p className="text-xs text-tinta-tenue">En la demostración no hay archivo real para mostrar.</p>
+              <p className="text-xs text-tinta-tenue">La vista del archivo llega en una próxima versión.</p>
             </>
           ) : (
             <p className="text-sm text-tinta-suave">{documento ? 'Este documento aún no se ha cargado.' : 'Elige un documento para verlo.'}</p>
@@ -216,6 +217,8 @@ export function PanelHistorial({ expediente }: { expediente: Expediente }) {
 }
 
 export function PanelConcepto({ concepto }: { concepto: Concepto | null }) {
+  // P9, D20: sin concepto del analista en esta versión; no se muestra un panel siempre vacío.
+  if (!POSTERGADAS_ACTIVAS) return null
   return (
     <Panel titulo="Concepto del analista">
       {concepto ? (
@@ -236,6 +239,7 @@ export function PanelConcepto({ concepto }: { concepto: Concepto | null }) {
 }
 
 export function PanelObservaciones({ expediente }: { expediente: Expediente }) {
+  if (!POSTERGADAS_ACTIVAS) return null
   return (
     <Panel titulo="Observaciones">
       {expediente.observaciones.length === 0 ? (

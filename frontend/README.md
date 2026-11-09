@@ -15,8 +15,9 @@ El backend tiene que estar arriba (`docker compose up -d` en la raíz): el regis
 
 El backend todavía no tiene la mayoría de endpoints. Mientras tanto, [Mock Service Worker](https://mswjs.io) los simula en el navegador con datos **sintéticos**:
 
-- Se activa con `VITE_API_SIMULADA=true` en `.env.development` (activo por defecto en `npm run dev`).
-- Lo que no está simulado pasa al backend real. Desde el 01/11 son reales: registro (RF-01), sesión con segundo factor (RF-03), verificación de identidad (RF-02), consentimientos (RF-04), recuperación de contraseña, `sistema/estado` y simulación (RF-05). Siguen simulados originación, oferta y pagaré, consola interna y administración.
+- **Desde el 08/11/2026 (P9, D22) `npm run dev` usa solo la API real:** `VITE_API_SIMULADA=false` en `.env.development`. MSW queda para `npm test`; con `VITE_API_SIMULADA=true` se puede volver a la demostración en el navegador, sin la consola, que ya es real.
+- Lo fuera de la primera versión (administración, auditoría, comité, reconsideración y concepto del analista) no se borró: se oculta con `src/lib/primeraVersion.ts` y las rutas muestran "No disponible en esta versión".
+- Lo que no está simulado pasa al backend real. Desde el 01/11 son reales: registro (RF-01), sesión con segundo factor (RF-03), verificación de identidad (RF-02), consentimientos (RF-04), recuperación de contraseña, `sistema/estado` y simulación (RF-05). Desde el 08/11 también originación, oferta y pagaré y la consola del oficial. Siguen sin API real la explicación de la decisión, la reconsideración y la administración.
 - Cuando Laravel implemente un endpoint, se **borra su handler** en `src/mocks/handlers/` y la pantalla queda conectada sin tocar nada más.
 - El contrato que esperan las pantallas está en [`docs/contrato-api-v1-frontend.md`](../docs/contrato-api-v1-frontend.md) y los tipos en `src/lib/api/tipos.ts`.
 - **Modo mixto:** `src/mocks/handlers/puenteSesion.ts` deja pasar la sesión real y enlaza por correo a la persona conectada con la base simulada, para que las pantallas que siguen simuladas respondan a la misma persona. Se borra cuando no quede ninguna pantalla simulada.

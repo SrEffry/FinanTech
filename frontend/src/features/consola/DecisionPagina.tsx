@@ -18,12 +18,13 @@ import { useToast } from '../../components/ui/toastContexto'
 import { CuotaConTea } from '../../components/dominio/CuotaConTea'
 import { EstadoBadge } from '../../components/dominio/Estado'
 import { EncabezadoPagina } from '../../components/layouts/Comunes'
+import { POSTERGADAS_ACTIVAS } from '../../lib/primeraVersion'
 import { PanelConcepto, PanelEvaluacion, PanelIngresos } from './PanelesExpediente'
 
 const OPCIONES: { valor: ResultadoDecision; etiqueta: string; descripcion: string }[] = [
   { valor: 'aprobada', etiqueta: 'Aprobar', descripcion: 'Con el monto, plazo y tasa que pidió el cliente.' },
   { valor: 'aprobada_condicionada', etiqueta: 'Aprobar con condiciones', descripcion: 'Ajustas monto, plazo o tasa.' },
-  { valor: 'negada', etiqueta: 'Negar', descripcion: 'El cliente verá el motivo y podrá pedir reconsideración.' },
+  { valor: 'negada', etiqueta: 'Negar', descripcion: POSTERGADAS_ACTIVAS ? 'El cliente verá el motivo y podrá pedir reconsideración.' : 'El cliente verá el motivo.' },
   { valor: 'comite', etiqueta: 'Enviar a comité', descripcion: 'Cuando supera tu atribución o necesita otra instancia.' },
 ]
 
@@ -151,14 +152,14 @@ function FormularioDecision({ expediente, contexto }: { expediente: Expediente; 
                 <p>
                   Tu atribución es de <span className="font-semibold">{formatoMoneda(contexto.atribucion_monto)}</span>.
                   {superaAtribucion
-                    ? ' Esta solicitud la supera: solo puedes negarla, enviarla a comité o aprobar un monto dentro de tu atribución.'
+                    ? ` Esta solicitud la supera: solo puedes negarla${POSTERGADAS_ACTIVAS ? ', enviarla a comité' : ''} o aprobar un monto dentro de tu atribución.`
                     : ' Esta solicitud está dentro de tu atribución.'}
                 </p>
               </div>
 
               <fieldset disabled={bloqueado} className="flex flex-col gap-2" aria-describedby={errores.resultado ? 'error-resultado' : undefined}>
                 <legend className="mb-1 text-sm font-medium">Decisión</legend>
-                {OPCIONES.map((o) => {
+                {OPCIONES.filter((o) => POSTERGADAS_ACTIVAS || o.valor !== 'comite').map((o) => {
                   const deshabilitada = o.valor === 'aprobada' && superaAtribucion
                   return (
                     <label
@@ -211,7 +212,7 @@ function FormularioDecision({ expediente, contexto }: { expediente: Expediente; 
               ) : null}
 
               {sinAtribucion ? (
-                <Alert tono="advertencia">El monto supera tu atribución. Bájalo o envía la solicitud a comité.</Alert>
+                <Alert tono="advertencia">El monto supera tu atribución. Bájalo{POSTERGADAS_ACTIVAS ? ' o envía la solicitud a comité' : ''}.</Alert>
               ) : null}
 
               <Field id="motivo" etiqueta="Motivo" ayuda="Obligatorio. El cliente verá una versión en lenguaje claro." error={errores.motivo}>

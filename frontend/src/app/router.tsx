@@ -4,7 +4,7 @@ import { RutaProtegida } from '../components/layouts/Comunes'
 import { ConsolaLayout } from '../components/layouts/ConsolaLayout'
 import { PortalLayout } from '../components/layouts/PortalLayout'
 import { PublicoLayout } from '../components/layouts/PublicoLayout'
-import { ErrorPagina, NoEncontradaPagina, Raiz } from './Paginas'
+import { ErrorPagina, FueraDeVersion, NoEncontradaPagina, Raiz } from './Paginas'
 
 /** Cada pantalla se carga aparte (división por rutas, RNF-01). */
 function pagina(cargar: () => Promise<{ default: React.ComponentType }>): Pick<RouteObject, 'lazy'> {
@@ -84,14 +84,14 @@ export const router = createBrowserRouter([
               {
                 element: <RutaProtegida roles={['administrador']} />,
                 children: [
-                  { path: 'admin/usuarios', ...pagina(() => import('../features/administracion/UsuariosPagina')) },
-                  { path: 'admin/parametros', ...pagina(() => import('../features/administracion/ParametrosPagina')) },
-                  { path: 'admin/auditoria', ...pagina(() => import('../features/administracion/AuditoriaPagina')) },
+                  { path: 'admin/usuarios', element: <FueraDeVersion que="La gestión de usuarios" /> },
+                  { path: 'admin/parametros', element: <FueraDeVersion que="La gestión de parámetros" /> },
+                  { path: 'admin/auditoria', element: <FueraDeVersion que="La consulta de auditoría" /> },
                 ],
               },
               {
                 element: <RutaProtegida roles={['oficial', 'contabilidad', 'directivo']} />,
-                children: [{ path: 'auditoria', ...pagina(() => import('../features/administracion/AuditoriaPagina')) }],
+                children: [{ path: 'auditoria', element: <FueraDeVersion que="La consulta de actividad" /> }],
               },
               {
                 element: <RutaProtegida roles={['contabilidad', 'directivo']} />,

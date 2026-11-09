@@ -13,7 +13,7 @@ import { CargaPagina } from '../../components/ui/Spinner'
 import { useToast } from '../../components/ui/toastContexto'
 import { EncabezadoPagina } from '../../components/layouts/Comunes'
 import { DistintivoSimulado } from '../../components/dominio/Distintivos'
-import { useServiciosSimulados } from '../acceso/sesion'
+import { POSTERGADAS_ACTIVAS } from '../../lib/primeraVersion'
 
 const TITULO = {
   negada: 'Tu solicitud no fue aprobada',
@@ -33,8 +33,6 @@ export default function ExplicacionPagina() {
   const [adjunto, setAdjunto] = useState<File | null>(null)
   const [error, setError] = useState<string>()
   const explicacion = useQuery({ queryKey: ['explicacion', id], queryFn: () => obtenerExplicacion(id) })
-  // MR-004: la decisión se apoyó en la central de riesgo; si esa consulta es simulada, la constancia lo dice.
-  const simulado = useServiciosSimulados()
 
   const reconsideracion = useMutation({
     mutationFn: () => pedirReconsideracion(id, argumentos.trim(), adjunto ? [adjunto] : []),
@@ -60,7 +58,8 @@ export default function ExplicacionPagina() {
           { etiqueta: e.radicado, a: `/portal/solicitudes/${id}` },
           { etiqueta: 'Decisión' },
         ]}
-        extra={simulado ? <DistintivoSimulado que="Decisión con consulta simulada a centrales de riesgo" /> : undefined}
+        // MR-004: el servidor dice si esta decisión se apoyó en una central simulada.
+        extra={e.simulado ? <DistintivoSimulado que="Decisión con consulta simulada a centrales de riesgo" /> : undefined}
         acciones={
           <Button variante="secundario" tamano="sm" className="no-imprimir" icono={<Printer aria-hidden="true" className="size-4" />} onClick={() => window.print()}>
             Descargar o imprimir (PDF)
@@ -81,7 +80,7 @@ export default function ExplicacionPagina() {
             {e.automatizada ? (
               <>
                 <Bot aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-                La tomó un sistema automático con reglas aprobadas por FinanTech. Puedes pedir que una persona la revise.
+                La tomó un sistema automático con reglas aprobadas por FinanTech.{POSTERGADAS_ACTIVAS ? ' Puedes pedir que una persona la revise.' : ''}
               </>
             ) : (
               <>
@@ -134,7 +133,7 @@ export default function ExplicacionPagina() {
             {e.reconsideracion.respuesta ? <p className="font-medium">{e.reconsideracion.respuesta}</p> : null}
           </div>
         </Panel>
-      ) : e.resultado === 'negada' ? (
+      ) : e.resultado === 'negada' && POSTERGADAS_ACTIVAS ? (
         <Panel titulo="¿Crees que debemos revisarla?" className="no-imprimir">
           {e.puede_reconsiderar ? (
             <form

@@ -1,9 +1,10 @@
-import { Navigate, Outlet, ScrollRestoration, isRouteErrorResponse, useRouteError } from 'react-router'
+import { Navigate, Outlet, ScrollRestoration, isRouteErrorResponse, useLocation, useRouteError } from 'react-router'
 import { ButtonLink } from '../components/ui/Button'
 import { CargaPagina } from '../components/ui/Spinner'
 import { DistintivoDemo } from '../components/dominio/Distintivos'
 import { Logo } from '../components/dominio/Marca'
-import { inicioDeRol, useSesion } from '../features/acceso/sesion'
+import { NoDisponible } from '../components/layouts/NoDisponible'
+import { inicioDeRol, useSesion, useUsuario } from '../features/acceso/sesion'
 
 /** Raíz: restauración del scroll y la marca de demostración, en todas las páginas. */
 export function Raiz() {
@@ -13,6 +14,23 @@ export function Raiz() {
       <Outlet />
       <ScrollRestoration />
     </>
+  )
+}
+
+/**
+ * Ruta fuera de la primera versión (P9, D22): se avisa en lugar de mostrar una pantalla sin API.
+ * Si la ruta ya es el inicio del rol (administrador), se vuelve a la página pública para no dar vueltas.
+ */
+export function FueraDeVersion({ que }: { que: string }) {
+  const { rol } = useUsuario()
+  const { pathname } = useLocation()
+  const inicio = inicioDeRol(rol)
+  return (
+    <NoDisponible
+      que={que}
+      volverA={pathname === inicio ? '/' : inicio}
+      ahora={rol === 'oficial' ? 'Por ahora puedes revisar y decidir solicitudes.' : ''}
+    />
   )
 }
 
