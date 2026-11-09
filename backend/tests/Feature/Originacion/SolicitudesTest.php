@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Process\Pool;
 
-/** Doble del directorio de clientes mientras Identidad publica su servicio (T02). */
+/** Doble del directorio de clientes: estas pruebas no dependen de Identidad. */
 class DirectorioClientesFalso implements DirectorioClientes
 {
     /** @var list<int> */
@@ -34,6 +34,11 @@ class DirectorioClientesFalso implements DirectorioClientes
     public function consienteConsultaCentrales(int $clienteId): bool
     {
         return ! in_array($clienteId, $this->sinConsentimientoCentrales, true);
+    }
+
+    public function registrarConsentimientoCentrales(int $clienteId): void
+    {
+        $this->sinConsentimientoCentrales = array_values(array_diff($this->sinConsentimientoCentrales, [$clienteId]));
     }
 
     public function datosConocidos(int $clienteId): array

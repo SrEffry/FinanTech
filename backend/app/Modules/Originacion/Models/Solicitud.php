@@ -51,6 +51,11 @@ class Solicitud extends Model
         return $this->hasMany(HistorialEstado::class, 'solicitud_id')->orderBy('registrado_en')->orderBy('id');
     }
 
+    public function documentos(): HasMany
+    {
+        return $this->hasMany(DocumentoSolicitud::class, 'solicitud_id')->orderBy('id');
+    }
+
     /** RN-28: valor de la columna única mientras la solicitud está activa. */
     public static function claveActiva(int $clienteId, string $producto): string
     {

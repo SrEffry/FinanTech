@@ -2,6 +2,7 @@
 
 namespace App\Modules\Originacion\Adapters;
 
+use App\Modules\Identidad\Services\Consentimientos;
 use App\Modules\Identidad\Services\PerfilCliente;
 use App\Modules\Originacion\Contracts\DirectorioClientes;
 use App\Shared\Exceptions\ErrorNegocio;
@@ -15,7 +16,10 @@ class DirectorioClientesIdentidad implements DirectorioClientes
     /** Código de la finalidad de RN-33 en el catálogo de Identidad (RF-04). */
     public const FINALIDAD_CENTRALES = 'consulta_centrales';
 
-    public function __construct(private readonly PerfilCliente $perfil) {}
+    public function __construct(
+        private readonly PerfilCliente $perfil,
+        private readonly Consentimientos $consentimientos,
+    ) {}
 
     public function identidadVerificada(int $clienteId): bool
     {
@@ -25,6 +29,15 @@ class DirectorioClientesIdentidad implements DirectorioClientes
     public function consienteConsultaCentrales(int $clienteId): bool
     {
         return $this->perfil->tieneConsentimiento($clienteId, self::FINALIDAD_CENTRALES);
+    }
+
+    public function registrarConsentimientoCentrales(int $clienteId): void
+    {
+        $usuarioId = $this->perfil->usuarioId($clienteId)
+            ?? throw new ErrorNegocio('cliente_no_encontrado', 'No encontramos tus datos de cliente. Vuelve a ingresar.', 404);
+
+        // Consentimientos no registra nada si ya estaba otorgada (RN-21) y deja la auditoría.
+        $this->consentimientos->registrar($clienteId, $usuarioId, self::FINALIDAD_CENTRALES, 'otorga', 'web');
     }
 
     public function datosConocidos(int $clienteId): array
